@@ -1,0 +1,18 @@
+<div id="card" class="card">
+    <p class="reveal">
+{%- for tok in tokens -%}
+<span class="tok{% if tok.matched %} good{% endif %}{% if tok.is_target %} target{% endif %}">{{ tok.text }}</span>{{ " " }}
+{%- endfor -%}
+    </p>
+    {% if gloss %}<p class="gloss">{{ gloss }}</p>{% endif %}
+    <form hx-post="/grade" hx-target="#card" hx-swap="outerHTML">
+        <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
+        <input type="hidden" name="typed" value="{{ typed }}">
+        <div class="grades">
+            <button type="submit" name="grade" value="0" class="g-again">Again</button>
+            <button type="submit" name="grade" value="3" class="g-hard">Hard</button>
+            <button type="submit" name="grade" value="4" class="g-good">Good</button>
+            <button type="submit" name="grade" value="5" class="g-easy">Easy</button>
+        </div>
+    </form>
+</div>

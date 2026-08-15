@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>your words</h1>
+<input type="search" name="q" value="{{ q }}" placeholder="search…"
+       hx-get="/words" hx-target="#rows" hx-swap="innerHTML"
+       hx-trigger="keyup changed delay:200ms" autofocus autocomplete="off">
+<table class="words">
+    <thead><tr><th>lemma</th><th>gloss</th><th>status</th><th>due</th></tr></thead>
+    <tbody id="rows">
+        {% include "_word_rows.html" %}
+    </tbody>
+</table>
+<p class="muted"><a href="/study">study</a> · <a href="/stats">stats</a></p>
+{% endblock %}

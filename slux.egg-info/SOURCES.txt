@@ -1,0 +1,14 @@
+pyproject.toml
+app/__init__.py
+app/db.py
+app/gen.py
+app/langs.py
+app/main.py
+app/srs.py
+app/translit.py
+app/tts.py
+slux.egg-info/PKG-INFO
+slux.egg-info/SOURCES.txt
+slux.egg-info/dependency_links.txt
+slux.egg-info/requires.txt
+slux.egg-info/top_level.txt

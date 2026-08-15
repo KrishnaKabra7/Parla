@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="muted"><a href="/words">← all words</a></p>
+<h1>{{ word.lemma }}</h1>
+{% if word.gloss_en %}<p class="gloss">{{ word.gloss_en }}</p>{% endif %}
+{% for s in sentences %}
+<div class="sentence-row">
+    <p>{{ s.text }}</p>
+    <p class="muted">{{ s.gloss_en }}</p>
+    <audio controls src="/audio/{{ s.audio_path }}"></audio>
+</div>
+{% else %}
+<p class="muted">no cached sentences yet.</p>
+{% endfor %}
+{% endblock %}

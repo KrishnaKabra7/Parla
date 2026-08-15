@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "_card.html" %}
+<p class="muted nav-links"><a href="/words">words</a> · <a href="/stats">stats</a></p>
+<script>
+document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input,textarea')) return;
+    const audio = document.getElementById('audio');
+    if ((e.key === 'r' || e.key === 'R') && audio) { audio.play(); e.preventDefault(); return; }
+    const map = {'1': '0', '2': '3', '3': '4', '4': '5'};
+    if (e.key in map) {
+        const btn = document.querySelector(`.grades button[value="${map[e.key]}"]`);
+        if (btn) { btn.click(); e.preventDefault(); }
+    }
+});
+</script>
+{% endblock %}

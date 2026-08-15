@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>stats</h1>
+<p class="muted">known words: <strong>{{ known }}</strong> · streak: <strong>{{ streak }}</strong> day{{ '' if streak == 1 else 's' }}</p>
+
+<h2>reviews (last 30 days)</h2>
+{% set width = 600 %}
+{% set height = 160 %}
+{% set n = counts|length %}
+{% set gap = 2 %}
+{% set bw = (width - (n - 1) * gap) / n %}
+{% set peak = counts|max %}
+{% set peak = peak if peak > 0 else 1 %}
+<svg viewBox="0 0 {{ width }} {{ height + 30 }}" class="chart" role="img" aria-label="reviews per day">
+    {% for c in counts %}
+        {% set h = (c / peak) * height %}
+        {% set x = loop.index0 * (bw + gap) %}
+        <rect x="{{ x }}" y="{{ height - h }}" width="{{ bw }}" height="{{ h }}" fill="var(--accent)"></rect>
+    {% endfor %}
+    <text x="0" y="{{ height + 20 }}" fill="var(--muted)" font-size="11">{{ days[0].isoformat() }}</text>
+    <text x="{{ width }}" y="{{ height + 20 }}" fill="var(--muted)" font-size="11" text-anchor="end">{{ days[-1].isoformat() }}</text>
+</svg>
+
+<p class="muted"><a href="/study">study</a> · <a href="/words">words</a></p>
+{% endblock %}

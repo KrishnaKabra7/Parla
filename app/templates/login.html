@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>slux</h1>
+<p class="muted">audio-first russian vocab. type what you hear.</p>
+<form method="post" action="/login">
+    <label for="name">what should i call you?</label>
+    <input type="text" id="name" name="name" autofocus autocomplete="off" required>
+    <button type="submit">start</button>
+</form>
+{% endblock %}

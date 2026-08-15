@@ -1,0 +1,13 @@
+<div id="card" class="card">
+{% if sentence_id %}
+    <audio id="audio" src="/audio/{{ audio }}" autoplay></audio>
+    <button type="button" class="replay" onclick="document.getElementById('audio').play()" aria-label="replay">▶</button>
+    <form hx-post="/review" hx-target="#card" hx-swap="outerHTML" autocomplete="off">
+        <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
+        <input type="text" name="typed" autofocus placeholder="type what you heard">
+        <button type="submit">check</button>
+    </form>
+{% else %}
+    <p class="muted">all caught up — come back later.</p>
+{% endif %}
+</div>
