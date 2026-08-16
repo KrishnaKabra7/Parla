@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% include "_card.html" %}
+<div id="spinner" class="htmx-indicator spinner">generating…</div>
 <p class="muted nav-links"><a href="/words">words</a> · <a href="/stats">stats</a></p>
 <script>
 document.addEventListener('keydown', (e) => {

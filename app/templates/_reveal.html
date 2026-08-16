@@ -4,8 +4,9 @@
 <span class="tok{% if tok.matched %} good{% endif %}{% if tok.is_target %} target{% endif %}">{{ tok.text }}</span>{{ " " }}
 {%- endfor -%}
     </p>
+    {% if latin %}<p class="translit">{{ latin }}</p>{% endif %}
     {% if gloss %}<p class="gloss">{{ gloss }}</p>{% endif %}
-    <form hx-post="/grade" hx-target="#card" hx-swap="outerHTML">
+    <form hx-post="/grade" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner">
         <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
         <input type="hidden" name="typed" value="{{ typed }}">
         <div class="grades">

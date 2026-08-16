@@ -81,3 +81,31 @@ def test_words_seeded_from_freq_file(client: TestClient):
     n = conn.execute("SELECT COUNT(*) AS n FROM words WHERE lang='ru'").fetchone()["n"]
     conn.close()
     assert n > 10  # seeded from data/ru_freq.txt (currently ~40 lemmas)
+
+
+def test_prefetch_generates_next_word_after_study(client: TestClient):
+    client.post("/login", data={"name": "tester"}, follow_redirects=False)
+    client.get("/study")
+    from app import db
+    conn = db.connect()
+    n = conn.execute("SELECT COUNT(DISTINCT word_id) AS n FROM sentences").fetchone()["n"]
+    conn.close()
+    # 1 for the served card + 1 prefetched in the background
+    assert n == 2
+
+
+def test_prefetch_makes_grade_a_cache_hit(client: TestClient):
+    client.post("/login", data={"name": "tester"}, follow_redirects=False)
+    client.get("/study")
+    # After GET /study: 2 Anthropic calls (current + prefetch of next)
+    assert client.fake_client.messages.create.call_count == 2  # type: ignore[attr-defined]
+
+    from app import db
+    conn = db.connect()
+    sid = conn.execute("SELECT id FROM sentences LIMIT 1").fetchone()["id"]
+    conn.close()
+
+    client.post("/grade", data={"sentence_id": sid, "grade": 4, "typed": ""})
+    # /grade served the next card WITHOUT a new API call (cache hit from prefetch),
+    # then prefetched the word after that (+1 call)
+    assert client.fake_client.messages.create.call_count == 3  # type: ignore[attr-defined]

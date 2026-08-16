@@ -33,7 +33,7 @@ footer {
     color: var(--muted);
 }
 
-input[type=text], input[type=submit], button {
+input, button {
     font: inherit;
     color: inherit;
 }
@@ -82,7 +82,14 @@ form > * + * {
     text-underline-offset: 4px;
     text-decoration-thickness: 2px;
 }
+.translit { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; }
 .gloss { color: var(--muted); font-style: italic; }
+
+.spinner {
+    display: none;
+    text-align: center; color: var(--muted); margin-top: 1rem;
+}
+.spinner.htmx-request { display: block; }
 .grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 1rem; }
 .grades button { padding: 1rem 0.5rem; font-weight: 600; color: #fff; }
 .g-again { background: #7f1d1d; }
@@ -114,7 +121,4 @@ h2 { font-size: 1rem; color: var(--muted); margin-top: 2rem; }
 a { color: var(--accent); }
 
 .nav-links { text-align: center; margin-top: 3rem; }
-
-
-
 

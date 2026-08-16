@@ -5,7 +5,7 @@ from anthropic import Anthropic
 
 from app.langs import LANGS
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "claude-haiku-4-5"
 MAX_TOKENS = 1024
 
 
@@ -19,12 +19,6 @@ class Sentence:
 class GenResult:
     gloss_en: str
     sentences: list[Sentence]
-
-
-def _build_prompt(lang: str, target: str, known: list[str]) -> str:
-    tpl = LANGS[lang]["gen_prompt"]
-    known_str = ", ".join(known) if known else "(none)"
-    return tpl.replace("{target}", target).replace("{known}", known_str)
 
 
 def _parse(text: str) -> GenResult:
@@ -52,12 +46,24 @@ def generate(
     client: Anthropic | None = None,
 ) -> GenResult:
     client = client or Anthropic()
-    prompt = _build_prompt(lang, target, known)
+    # Sorted so identical known-lemma sets produce byte-identical prefix bytes;
+    # prompt caching is a prefix match and any reordering silently invalidates it.
+    known_str = ", ".join(sorted(known)) if known else "(none)"
+    system = [
+        {"type": "text", "text": LANGS[lang]["system_prompt"]},
+        {
+            "type": "text",
+            "text": f"Known lemmas: {known_str}",
+            "cache_control": {"type": "ephemeral"},
+        },
+    ]
+    user_content = f"Target word: {target}"
     for _ in range(2):
         msg = client.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
+            system=system,
+            messages=[{"role": "user", "content": user_content}],
         )
         try:
             return _parse(msg.content[0].text)

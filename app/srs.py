@@ -11,7 +11,7 @@ class Grade(IntEnum):
 
 DEFAULT_EF = 2.5
 MIN_EF = 1.3
-KNOWN_THRESHOLD_DAYS = 21.0
+KNOWN_THRESHOLD_DAYS = 3.0
 
 
 def update_ef(ef: float, grade: int) -> float:

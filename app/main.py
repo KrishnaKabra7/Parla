@@ -1,9 +1,10 @@
 import os
 from contextlib import asynccontextmanager
+from datetime import date, timedelta
 from pathlib import Path
 
 from anthropic import Anthropic
-from fastapi import Depends, FastAPI, Form, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -11,6 +12,7 @@ from itsdangerous import BadSignature, URLSafeSerializer
 
 from app import db, srs, study
 from app.langs import LANGS
+from app.translit import to_latin
 
 BASE_DIR = Path(__file__).parent
 AUDIO_DIR = Path("data/audio")
@@ -107,6 +109,21 @@ def logout():
     return resp
 
 
+async def _prefetch_next(user_id: int, client: Anthropic) -> None:
+    """Best-effort: pre-generate sentences for the next likely word.
+    Runs after the response is sent so it doesn't add to the user's wait."""
+    conn = db.connect()
+    try:
+        item = study.pick_next(conn, user_id, LANG)
+        if item is None:
+            return
+        await study.ensure_sentences(conn, item.word_id, item.lemma, LANG, user_id, client)
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+
 async def _prepare_card(conn, user_id: int, client: Anthropic) -> dict:
     item = study.pick_next(conn, user_id, LANG)
     if item is None:
@@ -123,6 +140,7 @@ async def _prepare_card(conn, user_id: int, client: Anthropic) -> dict:
 @app.get("/study")
 async def study_page(
     request: Request,
+    background_tasks: BackgroundTasks,
     user_id: int = Depends(require_user),
     client: Anthropic = Depends(get_anthropic),
 ):
@@ -131,6 +149,7 @@ async def study_page(
         ctx = await _prepare_card(conn, user_id, client)
     finally:
         conn.close()
+    background_tasks.add_task(_prefetch_next, user_id, client)
     return templates.TemplateResponse(request, "study.html", ctx)
 
 
@@ -163,6 +182,7 @@ def review(
             "sentence_id": sentence_id,
             "tokens": tokens,
             "gloss": row["gloss_en"],
+            "latin": to_latin(row["text"]),
             "typed": typed,
         },
     )
@@ -174,29 +194,18 @@ def words_page(
     q: str = "",
     user_id: int = Depends(require_user),
 ):
+    like = f"%{q.strip().lower()}%"
     conn = db.connect()
     try:
-        like = f"%{q.strip().lower()}%" if q.strip() else None
-        if like:
-            rows = conn.execute(
-                """
-                SELECT w.id, w.lemma, w.gloss_en, uw.status, uw.due_at
-                FROM user_words uw JOIN words w ON w.id = uw.word_id
-                WHERE uw.user_id = ? AND w.lang = ? AND LOWER(w.lemma) LIKE ?
-                ORDER BY uw.due_at IS NULL, uw.due_at ASC
-                """,
-                (user_id, LANG, like),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                """
-                SELECT w.id, w.lemma, w.gloss_en, uw.status, uw.due_at
-                FROM user_words uw JOIN words w ON w.id = uw.word_id
-                WHERE uw.user_id = ? AND w.lang = ?
-                ORDER BY uw.due_at IS NULL, uw.due_at ASC
-                """,
-                (user_id, LANG),
-            ).fetchall()
+        rows = conn.execute(
+            """
+            SELECT w.id, w.lemma, w.gloss_en, uw.status, uw.due_at
+            FROM user_words uw JOIN words w ON w.id = uw.word_id
+            WHERE uw.user_id = ? AND w.lang = ? AND LOWER(w.lemma) LIKE ?
+            ORDER BY uw.due_at IS NULL, uw.due_at ASC
+            """,
+            (user_id, LANG, like),
+        ).fetchall()
     finally:
         conn.close()
     tpl = "_word_rows.html" if request.headers.get("HX-Request") else "words.html"
@@ -256,8 +265,6 @@ def stats_page(
     finally:
         conn.close()
 
-    from datetime import date, timedelta
-
     today = date.today()
     days = [(today - timedelta(days=29 - i)) for i in range(30)]
     counts = [per_day.get(d.isoformat(), 0) for d in days]
@@ -281,6 +288,7 @@ def stats_page(
 @app.post("/grade")
 async def grade(
     request: Request,
+    background_tasks: BackgroundTasks,
     sentence_id: int = Form(...),
     grade: int = Form(...),
     typed: str = Form(""),
@@ -321,4 +329,5 @@ async def grade(
         ctx = await _prepare_card(conn, user_id, client)
     finally:
         conn.close()
+    background_tasks.add_task(_prefetch_next, user_id, client)
     return templates.TemplateResponse(request, "_card.html", ctx)

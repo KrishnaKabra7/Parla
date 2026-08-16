@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 from sqlite3 import Connection, Row
 
@@ -6,6 +7,10 @@ from anthropic import Anthropic
 from app import gen, tts
 from app.langs import LANGS
 from app.translit import to_cyrillic
+
+# Per-word locks so a background prefetch and a foreground gen for the same
+# word serialize instead of double-firing Anthropic + edge-tts.
+_sentence_locks: dict[int, asyncio.Lock] = {}
 
 
 @dataclass
@@ -48,7 +53,6 @@ def known_lemmas(conn: Connection, user_id: int, lang: str) -> list[str]:
         SELECT w.lemma FROM user_words uw
         JOIN words w ON w.id = uw.word_id
         WHERE uw.user_id = ? AND w.lang = ?
-          AND uw.status IN ('learning', 'known')
         """,
         (user_id, lang),
     ).fetchall()
@@ -63,22 +67,24 @@ async def ensure_sentences(
     user_id: int,
     client: Anthropic,
 ) -> None:
-    row = conn.execute(
-        "SELECT COUNT(*) AS n FROM sentences WHERE word_id = ?", (word_id,)
-    ).fetchone()
-    if row["n"] > 0:
-        return
-    known = known_lemmas(conn, user_id, lang)
-    result = gen.generate(lang, lemma, known, client=client)
-    voice = LANGS[lang]["voice"]
-    for s in result.sentences:
-        audio = await tts.synthesize(s.text, voice)
-        conn.execute(
-            "INSERT INTO sentences(word_id, text, gloss_en, audio_path) VALUES (?, ?, ?, ?)",
-            (word_id, s.text, s.gloss_en, audio.name),
-        )
-    if result.gloss_en:
-        conn.execute("UPDATE words SET gloss_en = ? WHERE id = ?", (result.gloss_en, word_id))
+    lock = _sentence_locks.setdefault(word_id, asyncio.Lock())
+    async with lock:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM sentences WHERE word_id = ?", (word_id,)
+        ).fetchone()
+        if row["n"] > 0:
+            return
+        known = known_lemmas(conn, user_id, lang)
+        result = gen.generate(lang, lemma, known, client=client)
+        voice = LANGS[lang]["voice"]
+        for s in result.sentences:
+            audio = await tts.synthesize(s.text, voice)
+            conn.execute(
+                "INSERT INTO sentences(word_id, text, gloss_en, audio_path) VALUES (?, ?, ?, ?)",
+                (word_id, s.text, s.gloss_en, audio.name),
+            )
+        if result.gloss_en:
+            conn.execute("UPDATE words SET gloss_en = ? WHERE id = ?", (result.gloss_en, word_id))
 
 
 def ensure_user_word(conn: Connection, user_id: int, word_id: int) -> None:
@@ -110,17 +116,9 @@ class Token:
 
 
 def diff_and_highlight(truth: str, typed: str, target_lemma: str) -> list[Token]:
-    typed_cy = to_cyrillic(typed)
-    typed_set = {_norm(t) for t in typed_cy.split() if _norm(t)}
-    stem = target_lemma.lower()[: min(4, len(target_lemma))]
-    out: list[Token] = []
-    for tok in truth.split():
-        n = _norm(tok)
-        out.append(
-            Token(
-                text=tok,
-                matched=bool(n) and n in typed_set,
-                is_target=bool(stem) and n.startswith(stem),
-            )
-        )
-    return out
+    typed_set = {_norm(t) for t in to_cyrillic(typed).split() if _norm(t)}
+    stem = target_lemma.lower()[:4]
+    return [
+        Token(text=tok, matched=_norm(tok) in typed_set, is_target=_norm(tok).startswith(stem))
+        for tok in truth.split()
+    ]

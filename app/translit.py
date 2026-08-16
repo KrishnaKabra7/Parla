@@ -64,3 +64,28 @@ def to_cyrillic(s: str) -> str:
             out.append(s[i])
             i += 1
     return "".join(out)
+
+
+_TO_LATIN = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e",
+    "ё": "yo", "ж": "zh", "з": "z", "и": "i", "й": "j", "к": "k",
+    "л": "l", "м": "m", "н": "n", "о": "o", "п": "p", "р": "r",
+    "с": "s", "т": "t", "у": "u", "ф": "f", "х": "kh", "ц": "ts",
+    "ч": "ch", "ш": "sh", "щ": "shch", "ъ": '"', "ы": "y", "ь": "'",
+    "э": "eh", "ю": "yu", "я": "ya",
+}
+
+
+def to_latin(s: str) -> str:
+    """Reverse-transliterate Cyrillic to Latin. Non-Cyrillic chars pass through."""
+    out: list[str] = []
+    for ch in s:
+        lower = ch.lower()
+        mapped = _TO_LATIN.get(lower)
+        if mapped is None:
+            out.append(ch)
+        elif ch == lower:
+            out.append(mapped)
+        else:
+            out.append(mapped.capitalize())
+    return "".join(out)

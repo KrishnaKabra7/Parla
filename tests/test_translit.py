@@ -1,4 +1,4 @@
-from app.translit import has_cyrillic, to_cyrillic
+from app.translit import has_cyrillic, to_cyrillic, to_latin
 
 
 def test_has_cyrillic_true():
@@ -54,3 +54,25 @@ def test_empty_string():
 
 def test_digits_pass_through():
     assert to_cyrillic("dom 5") == "дом 5"
+
+
+def test_to_latin_simple():
+    assert to_latin("привет") == "privet"
+
+
+def test_to_latin_multichar_letters():
+    assert to_latin("щи") == "shchi"
+    assert to_latin("жена") == "zhena"
+    assert to_latin("яблоко") == "yabloko"
+
+
+def test_to_latin_preserves_punctuation_and_digits():
+    assert to_latin("привет, как дела? 5") == "privet, kak dela? 5"
+
+
+def test_to_latin_capital_first_letter():
+    assert to_latin("Привет") == "Privet"
+
+
+def test_to_latin_passes_through_latin():
+    assert to_latin("hello") == "hello"
