@@ -199,7 +199,7 @@ def words_page(
     try:
         rows = conn.execute(
             """
-            SELECT w.id, w.lemma, w.gloss_en, uw.status, uw.due_at
+            SELECT w.id, w.lemma, w.gloss_en, uw.status, uw.ef, uw.due_at
             FROM user_words uw JOIN words w ON w.id = uw.word_id
             WHERE uw.user_id = ? AND w.lang = ? AND LOWER(w.lemma) LIKE ?
             ORDER BY uw.due_at IS NULL, uw.due_at ASC

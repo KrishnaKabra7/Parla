@@ -15,7 +15,7 @@ KNOWN_THRESHOLD_DAYS = 3.0
 
 
 def update_ef(ef: float, grade: int) -> float:
-    ef_new = ef + 0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02)
+    ef_new = ef + 0.5 - (5 - grade) * (0.08 + (5 - grade) * 0.02)
     return max(MIN_EF, ef_new)
 
 

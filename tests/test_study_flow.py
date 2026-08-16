@@ -57,7 +57,7 @@ def test_grade_updates_srs_and_returns_next_card(client: TestClient):
 def test_full_loop_generates_only_once_per_word(client: TestClient):
     _login(client)
     client.get("/study")
-    calls_after_first = client.fake_client.messages.create.call_count  # type: ignore[attr-defined]
+    calls_after_first = client.fake_client.messages.parse.call_count  # type: ignore[attr-defined]
     # Grade Good → get next card (may be same word or next)
     from app import db
     conn = db.connect()
@@ -98,7 +98,7 @@ def test_prefetch_makes_grade_a_cache_hit(client: TestClient):
     client.post("/login", data={"name": "tester"}, follow_redirects=False)
     client.get("/study")
     # After GET /study: 2 Anthropic calls (current + prefetch of next)
-    assert client.fake_client.messages.create.call_count == 2  # type: ignore[attr-defined]
+    assert client.fake_client.messages.parse.call_count == 2  # type: ignore[attr-defined]
 
     from app import db
     conn = db.connect()
@@ -108,4 +108,4 @@ def test_prefetch_makes_grade_a_cache_hit(client: TestClient):
     client.post("/grade", data={"sentence_id": sid, "grade": 4, "typed": ""})
     # /grade served the next card WITHOUT a new API call (cache hit from prefetch),
     # then prefetched the word after that (+1 call)
-    assert client.fake_client.messages.create.call_count == 3  # type: ignore[attr-defined]
+    assert client.fake_client.messages.parse.call_count == 3  # type: ignore[attr-defined]

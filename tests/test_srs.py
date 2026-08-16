@@ -23,18 +23,19 @@ def test_update_ef_easy_raises_ef():
     assert update_ef(DEFAULT_EF, Grade.EASY) > DEFAULT_EF
 
 
-def test_update_ef_good_keeps_ef_stable():
-    assert update_ef(DEFAULT_EF, Grade.GOOD) == DEFAULT_EF
+def test_update_ef_good_raises_ef():
+    assert update_ef(DEFAULT_EF, Grade.GOOD) > DEFAULT_EF
 
 
-def test_update_ef_hard_lowers_ef():
-    assert update_ef(DEFAULT_EF, Grade.HARD) < DEFAULT_EF
-
-
-def test_update_ef_again_lowers_ef_the_most():
+def test_update_ef_hard_raises_ef_but_less_than_good():
     ef_hard = update_ef(DEFAULT_EF, Grade.HARD)
-    ef_again = update_ef(DEFAULT_EF, Grade.AGAIN)
-    assert ef_again < ef_hard
+    ef_good = update_ef(DEFAULT_EF, Grade.GOOD)
+    assert ef_hard > DEFAULT_EF
+    assert ef_hard < ef_good
+
+
+def test_update_ef_only_again_lowers():
+    assert update_ef(DEFAULT_EF, Grade.AGAIN) < DEFAULT_EF
 
 
 def test_update_ef_floor():
@@ -83,7 +84,7 @@ def test_status_for_at_or_above_threshold_is_known():
 def test_review_returns_all_fields():
     now = datetime(2026, 1, 1, tzinfo=timezone.utc)
     ef_new, interval_new, due_at, status = review(DEFAULT_EF, 0, Grade.GOOD, now=now)
-    assert ef_new == DEFAULT_EF
+    assert ef_new == update_ef(DEFAULT_EF, Grade.GOOD)
     assert interval_new == 1.0
     assert due_at == now + timedelta(days=1)
     assert status == "learning"

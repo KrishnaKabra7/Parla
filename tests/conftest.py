@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -12,7 +11,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("SECRET_KEY", "test-secret")
 
     import importlib
-    from app import main, tts
+    from app import gen, main, tts
     importlib.reload(main)
 
     audio_dir = tmp_path / "audio"
@@ -26,20 +25,16 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr("app.study.tts.synthesize", fake_synth)
 
-    payload = json.dumps(
-        {
-            "gloss_en": "and",
-            "sentences": [
-                {"text": "Мама и папа.", "gloss_en": "Mom and dad."},
-                {"text": "Я и ты.", "gloss_en": "You and I."},
-                {"text": "Он и она.", "gloss_en": "He and she."},
-            ],
-        }
+    parsed = gen._GenResultOut(
+        gloss_en="and",
+        sentences=[
+            gen._SentenceOut(text="Мама и папа.", gloss_en="Mom and dad."),
+            gen._SentenceOut(text="Я и ты.", gloss_en="You and I."),
+            gen._SentenceOut(text="Он и она.", gloss_en="He and she."),
+        ],
     )
     fake_client = MagicMock()
-    fake_client.messages.create.return_value = MagicMock(
-        content=[MagicMock(text=payload)]
-    )
+    fake_client.messages.parse.return_value = MagicMock(parsed_output=parsed)
     main.app.dependency_overrides[main.get_anthropic] = lambda: fake_client
 
     with TestClient(main.app) as c:

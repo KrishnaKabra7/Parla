@@ -3,8 +3,9 @@
     <td><a href="/words/{{ r.id }}">{{ r.lemma }}</a></td>
     <td class="muted">{{ r.gloss_en or "" }}</td>
     <td>{{ r.status }}</td>
+    <td class="muted">{{ "%.2f"|format(r.ef) }}</td>
     <td class="muted">{{ r.due_at[:10] if r.due_at else "—" }}</td>
 </tr>
 {% else %}
-<tr><td colspan="4" class="muted">no words yet — start a session in <a href="/study">study</a>.</td></tr>
+<tr><td colspan="5" class="muted">no words yet — start a session in <a href="/study">study</a>.</td></tr>
 {% endfor %}
