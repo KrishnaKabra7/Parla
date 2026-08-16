@@ -50,9 +50,22 @@ def current_user_id(request: Request) -> int | None:
     if not tok:
         return None
     try:
-        return int(_serializer.loads(tok))
-    except (BadSignature, ValueError, TypeError):
+        name = _serializer.loads(tok)
+    except BadSignature:
         return None
+    if not isinstance(name, str) or not name.strip():
+        return None
+    name = name.strip()
+    # Cookie stores the name; resolve to user_id here, creating the row if
+    # missing. Handles ephemeral-storage restarts on Render free tier gracefully
+    # — a wiped DB just re-creates the user instead of throwing FK errors later.
+    conn = db.connect()
+    try:
+        conn.execute("INSERT OR IGNORE INTO users(name) VALUES (?)", (name,))
+        row = conn.execute("SELECT id FROM users WHERE name = ?", (name,)).fetchone()
+        return row["id"] if row else None
+    finally:
+        conn.close()
 
 
 def require_user(request: Request) -> int:
@@ -85,16 +98,10 @@ def login_submit(name: str = Form(...)):
     name = name.strip()
     if not name:
         return RedirectResponse("/login", status_code=303)
-    conn = db.connect()
-    try:
-        conn.execute("INSERT OR IGNORE INTO users(name) VALUES (?)", (name,))
-        row = conn.execute("SELECT id FROM users WHERE name = ?", (name,)).fetchone()
-    finally:
-        conn.close()
     resp = RedirectResponse("/study", status_code=303)
     resp.set_cookie(
         COOKIE_NAME,
-        _serializer.dumps(row["id"]),
+        _serializer.dumps(name),
         httponly=True,
         samesite="lax",
         max_age=60 * 60 * 24 * 365,
