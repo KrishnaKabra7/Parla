@@ -1,4 +1,8 @@
 <div id="card" class="card">
+    {% if audio %}
+    <audio id="audio" src="/audio/{{ audio }}" preload="auto"></audio>
+    <button type="button" class="replay" onclick="document.getElementById('audio').play()" aria-label="replay">▶</button>
+    {% endif %}
     <p class="reveal">
 {%- for tok in tokens -%}
 <span class="tok{% if tok.matched %} good{% endif %}{% if tok.is_target %} target{% endif %}">{{ tok.text }}</span>{{ " " }}

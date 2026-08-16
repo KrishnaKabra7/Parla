@@ -171,7 +171,7 @@ def review(
     try:
         row = conn.execute(
             """
-            SELECT s.id, s.text, s.gloss_en, w.lemma FROM sentences s
+            SELECT s.id, s.text, s.gloss_en, s.audio_path, w.lemma FROM sentences s
             JOIN words w ON w.id = s.word_id
             WHERE s.id = ?
             """,
@@ -190,6 +190,7 @@ def review(
             "tokens": tokens,
             "gloss": row["gloss_en"],
             "latin": to_latin(row["text"]),
+            "audio": row["audio_path"],
             "typed": typed,
         },
     )
