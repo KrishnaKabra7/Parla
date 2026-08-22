@@ -32,6 +32,15 @@ async def lifespan(app: FastAPI):
     db.init_schema(conn)
     for lang, pack in LANGS.items():
         db.seed_words(conn, lang, pack["freq_file"])
+    # Litestream restores the DB from R2 but audio files live on the ephemeral
+    # disk. Drop sentence rows whose mp3 is gone so those words re-generate.
+    orphans = [
+        (r["id"],)
+        for r in conn.execute("SELECT id, audio_path FROM sentences").fetchall()
+        if not (AUDIO_DIR / r["audio_path"]).exists()
+    ]
+    if orphans:
+        conn.executemany("DELETE FROM sentences WHERE id = ?", orphans)
     conn.close()
     yield
 

@@ -56,11 +56,36 @@ No JS framework, no build step, one process, one SQLite file at `data/slux.db`.
 **Known trade-offs on Render's free tier:**
 - **Cold start ~30-60s** after 15 min of inactivity. First click after a pause
   is slow; after that it's snappy until the next 15-min gap.
-- **No persistent disk.** `data/slux.db` and the mp3 cache live inside the
-  container, so they get wiped on every redeploy (and on some platform-side
-  restarts). Your SRS state won't survive long-term — fine for testing the
-  deploy path from your phone, but plan to move storage off-container before
-  relying on the app day-to-day. See "Planned migration" below.
+- **Ephemeral disk.** The container's disk gets wiped on redeploy and some
+  platform-side restarts. `data/slux.db` is persisted via Litestream → R2
+  (see below); the mp3 cache is not — sentences whose audio is missing get
+  pruned on boot and regenerated on next study.
+
+### Persist the DB with Litestream + Cloudflare R2 (free)
+
+The Dockerfile bundles [Litestream](https://litestream.io) as a sidecar that
+streams the SQLite WAL to an S3-compatible bucket and restores it on boot.
+Cloudflare R2's free tier (10 GB storage, 1M reads/mo) covers this app with
+huge headroom.
+
+One-time setup:
+
+1. Create a Cloudflare account, then **R2** → **Create bucket** (any name,
+   e.g. `slux`).
+2. **R2** → **Manage R2 API Tokens** → **Create API token**. Permissions:
+   *Object Read & Write*, scope to the bucket you just created. Copy the
+   **Access Key ID**, **Secret Access Key**, and the **S3 API endpoint URL**
+   shown at the bottom (looks like `https://<account>.r2.cloudflarestorage.com`).
+3. In Render → your service → **Environment**, add four vars:
+   - `R2_ENDPOINT` = the S3 API endpoint URL from step 2
+   - `R2_BUCKET` = your bucket name
+   - `R2_ACCESS_KEY_ID` = from step 2
+   - `R2_SECRET_ACCESS_KEY` = from step 2
+4. Redeploy. On first boot the bucket is empty so Litestream no-ops; every
+   subsequent boot restores `data/slux.db` from R2 before uvicorn starts.
+
+If none of the `R2_*` vars are set, the entrypoint skips Litestream and just
+runs uvicorn (local `docker run` works unchanged).
 
 ### Self-hosting (fallback)
 
@@ -70,18 +95,13 @@ Run uvicorn on any machine you leave on, expose it with a
 `data/slux.db` and `data/audio/` persist across restarts — back up `slux.db`
 occasionally.
 
-### Planned migration (persistent storage on Render)
+### Optional: persist the mp3 cache too
 
-To keep data across redeploys on the free tier, storage moves off-container:
-
-- **DB → [Turso](https://turso.tech)** via the `libsql` package. `libsql`
-  returns plain tuples (not sqlite3.Row), so `app/db.py` needs a dict-cursor
-  wrapper, plus explicit `.commit()` calls throughout (no autocommit).
-- **mp3 cache → Cloudflare R2** (S3-compatible, free 10GB / 1M reads/mo) via
-  `boto3`. `app/tts.py` uploads instead of writing locally; template audio
-  `src` points at R2 URLs.
-
-Not tiny — closer to a few hundred lines including test fixture updates.
+Currently only the DB is persisted (via Litestream + R2 above). The mp3 cache
+still lives on ephemeral disk, so orphan sentences get pruned on boot and
+re-cost one Anthropic call + three edge-tts renders per revisited word. To
+also persist audio: upload to R2 from `app/tts.py` via `boto3` and point
+template `<audio src>` at R2 URLs.
 
 ## Notes
 
