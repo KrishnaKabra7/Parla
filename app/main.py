@@ -13,7 +13,7 @@ from itsdangerous import BadSignature, URLSafeSerializer
 
 from app import db, srs, study, text_study
 from app.langs import LANGS
-from app.translit import to_latin
+from app.translit import to_cyrillic, to_latin
 
 BASE_DIR = Path(__file__).parent
 AUDIO_DIR = Path("data/audio")
@@ -520,17 +520,17 @@ def known_add_form(request: Request, user_id: int = Depends(require_user)):
 @app.post("/known/add")
 def known_add_submit(
     request: Request,
-    cyrillic: str = Form(...),
     latin: str = Form(...),
     english: str = Form(...),
+    cyrillic: str = Form(""),
     user_id: int = Depends(require_user),
 ):
-    cyrillic = cyrillic.strip()
     latin = latin.strip()
     english = english.strip()
-    if not cyrillic or not latin or not english:
+    cyrillic = cyrillic.strip() or to_cyrillic(latin)
+    if not latin or not english or not cyrillic:
         return templates.TemplateResponse(
-            request, "known_add.html", {"message": "all fields required"}
+            request, "known_add.html", {"message": "latin and english required"}
         )
     conn = db.connect()
     try:
