@@ -45,7 +45,7 @@ CREATE INDEX IF NOT EXISTS ix_sentences_word ON sentences(word_id);
 CREATE TABLE IF NOT EXISTS reviews (
     id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id),
-    sentence_id INTEGER NOT NULL REFERENCES sentences(id),
+    sentence_id INTEGER REFERENCES sentences(id) ON DELETE SET NULL,
     grade INTEGER NOT NULL,
     typed_answer TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -73,6 +73,37 @@ def connect(db_path: Path | str | None = None) -> sqlite3.Connection:
 
 def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    _migrate_reviews_sentence_fk(conn)
+
+
+def _migrate_reviews_sentence_fk(conn: sqlite3.Connection) -> None:
+    # Older DBs had reviews.sentence_id as NOT NULL with a plain FK, which
+    # blocked pruning orphan sentences after audio was wiped. Rebuild to
+    # nullable + ON DELETE SET NULL so pruning preserves review history.
+    cols = {r["name"]: r for r in conn.execute("PRAGMA table_info(reviews)")}
+    if "sentence_id" not in cols or cols["sentence_id"]["notnull"] == 0:
+        return
+    conn.execute("PRAGMA foreign_keys = OFF")
+    conn.executescript(
+        """
+        BEGIN;
+        CREATE TABLE reviews_new (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            sentence_id INTEGER REFERENCES sentences(id) ON DELETE SET NULL,
+            grade INTEGER NOT NULL,
+            typed_answer TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO reviews_new (id, user_id, sentence_id, grade, typed_answer, created_at)
+            SELECT id, user_id, sentence_id, grade, typed_answer, created_at FROM reviews;
+        DROP TABLE reviews;
+        ALTER TABLE reviews_new RENAME TO reviews;
+        CREATE INDEX IF NOT EXISTS ix_reviews_user_time ON reviews(user_id, created_at);
+        COMMIT;
+        """
+    )
+    conn.execute("PRAGMA foreign_keys = ON")
 
 
 def seed_words(conn: sqlite3.Connection, lang: str, freq_file: str | Path) -> int:
