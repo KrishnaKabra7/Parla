@@ -51,6 +51,28 @@ CREATE TABLE IF NOT EXISTS reviews (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS ix_reviews_user_time ON reviews(user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS known_words (
+    id INTEGER PRIMARY KEY,
+    lang TEXT NOT NULL DEFAULT 'ru',
+    cyrillic TEXT NOT NULL,
+    latin TEXT NOT NULL,
+    english TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (lang, cyrillic)
+);
+
+CREATE TABLE IF NOT EXISTS user_known_words (
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    known_word_id INTEGER NOT NULL REFERENCES known_words(id) ON DELETE CASCADE,
+    direction TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    ef REAL NOT NULL DEFAULT 2.5,
+    interval_days REAL NOT NULL DEFAULT 0,
+    due_at TEXT,
+    PRIMARY KEY (user_id, known_word_id, direction)
+);
+CREATE INDEX IF NOT EXISTS ix_user_known_words_due ON user_known_words(user_id, due_at);
 """
 
 
@@ -104,6 +126,38 @@ def _migrate_reviews_sentence_fk(conn: sqlite3.Connection) -> None:
         """
     )
     conn.execute("PRAGMA foreign_keys = ON")
+
+
+def seed_known_words(conn: sqlite3.Connection, seed_file: str | Path, lang: str = "ru") -> int:
+    """Load pipe-delimited cyrillic|latin|english triples. INSERT OR IGNORE so
+    re-runs are idempotent and file edits add new rows without touching
+    existing (possibly UI-added) entries. Returns count considered (not
+    necessarily inserted)."""
+    path = Path(seed_file)
+    if not path.exists():
+        return 0
+    rows: list[tuple[str, str, str, str]] = []
+    with path.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("|")
+            if len(parts) != 3:
+                continue
+            cyr, lat, eng = (p.strip() for p in parts)
+            if not cyr or not lat or not eng:
+                continue
+            rows.append((lang, cyr, lat, eng))
+    if not rows:
+        return 0
+    conn.execute("BEGIN")
+    conn.executemany(
+        "INSERT OR IGNORE INTO known_words(lang, cyrillic, latin, english) VALUES (?, ?, ?, ?)",
+        rows,
+    )
+    conn.execute("COMMIT")
+    return len(rows)
 
 
 def seed_words(conn: sqlite3.Connection, lang: str, freq_file: str | Path) -> int:

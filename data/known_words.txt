@@ -1,0 +1,506 @@
+# Seed list for text-to-text drills. Format: cyrillic|latin|english
+# Multiple English glosses comma-separated; any accepted for RU→EN direction.
+# For EN→RU direction, disambiguating hints in parentheses (case, gender, tense)
+# make the answer unique.
+# Loaded via INSERT OR IGNORE — edits here take effect on next boot; UI adds
+# go straight to the DB.
+я|ya|I
+не|ne|not
+что|chto|what, that
+в|v|in, at, to
+и|i|and
+ты|ty|you (sg informal)
+это|ehto|this, it
+на|na|on, at, to
+с|s|with, from
+он|on|he
+мы|my|we
+как|kak|how, like, as
+вы|vy|you (formal/pl)
+да|da|yes
+мне|mne|me (dat), to me
+у|u|at, by (у меня = I have)
+нет|net|no, not
+меня|menya|me (acc/gen)
+так|tak|so, thus
+но|no|but
+а|a|and, but
+его|ego|him (acc/gen), his
+все|vse|all, everyone
+она|ona|she
+тебя|tebya|you (acc/gen sg)
+о|o|about, of
+если|esli|if
+за|za|behind, for, at
+бы|by|would (conditional particle)
+тебе|tebe|you (dat sg), to you
+они|oni|they
+чтобы|chtoby|in order to, so that
+же|zhe|indeed (emphatic particle)
+есть|est'|there is, to eat, is
+просто|prosto|simply, just
+из|iz|from, out of
+к|k|to, toward
+для|dlya|for
+ну|nu|well
+когда|kogda|when
+хорошо|khorosho|good, well, OK
+здесь|zdes'|here
+по|po|along, on, by
+был|byl|was (masc)
+знаю|znayu|I know
+то|to|that, this
+только|tol'ko|only
+всё|vsyo|everything, all
+было|bylo|was (neut)
+вас|vas|you (acc/gen formal/pl)
+может|mozhet|can, maybe, he/she can
+нас|nas|us (acc/gen)
+вот|vot|here is, here
+от|ot|from
+быть|byt'|to be
+кто|kto|who
+будет|budet|will be
+почему|pochemu|why
+вам|vam|you (dat formal/pl), to you
+их|ikh|them (acc/gen), their
+очень|ochen'|very
+могу|mogu|I can
+уже|uzhe|already
+спасибо|spasibo|thank you, thanks
+или|ili|or
+нам|nam|us (dat), to us
+еще|eshche|still, yet, more
+там|tam|there
+нужно|nuzhno|need to, necessary
+сейчас|sejchas|now
+где|gde|where
+чем|chem|than, with what (instr)
+хочу|khochu|I want
+ничего|nichego|nothing
+этого|ehtogo|this (masc/neut gen)
+была|byla|was (fem)
+мой|moj|my (masc)
+ее|ee|her (acc), her (poss)
+ладно|ladno|OK, alright
+знаешь|znaesh'|you know (sg)
+до|do|until, before, up to
+этом|ehtom|this (masc/neut prep)
+потому|potomu|because
+теперь|teper'|now
+думаю|dumayu|I think
+больше|bol'she|more, bigger
+её|eyo|her (acc), her (poss)
+со|so|with (variant of с)
+раз|raz|time, once
+ему|emu|him (dat), to him
+надо|nado|need to, must
+время|vremya|time
+этот|ehtot|this (masc)
+ли|li|whether (interrogative particle)
+ещё|eshchyo|still, yet, more
+пока|poka|while, bye
+даже|dazhe|even
+привет|privet|hi, hello
+сказал|skazal|said (masc)
+себя|sebya|oneself (acc/gen)
+должен|dolzhen|must (masc), owe
+тоже|tozhe|also, too
+хочешь|khochesh'|you want (sg)
+давай|davaj|let's, come on
+никогда|nikogda|never
+эй|ehj|hey
+того|togo|that (masc/neut gen)
+тогда|togda|then
+него|nego|him (acc/gen after prep)
+ни|ni|neither, not a
+тут|tut|here
+были|byli|were (pl)
+конечно|konechno|of course
+правда|pravda|truth, truly
+об|ob|about (variant of о)
+моя|moya|my (fem)
+пожалуйста|pozhalujsta|please, you're welcome
+тобой|toboj|you (instr sg)
+сказать|skazat'|to say
+сегодня|segodnya|today
+один|odin|one (masc)
+лучше|luchshe|better
+можешь|mozhesh'|you can (sg)
+сюда|syuda|here (to here)
+мной|mnoj|me (instr)
+значит|znachit|so, means
+сделать|sdelat'|to do, to make
+всегда|vsegda|always
+дело|delo|thing, matter, affair
+можно|mozhno|possible, may
+ей|ej|her (dat), to her
+должны|dolzhny|must (pl)
+порядке|poryadke|in order (prep)
+без|bez|without
+день|den'|day
+том|tom|that (masc/neut prep)
+буду|budu|I will
+делать|delat'|to do, to make
+хотел|khotel|wanted (masc)
+чего|chego|what (gen)
+эти|ehti|these
+много|mnogo|many, a lot
+после|posle|after
+этим|ehtim|this (masc/neut instr)
+всего|vsego|of all, total
+во|vo|in (variant of в)
+твой|tvoj|your (masc sg)
+ним|nim|him (instr, or dat/instr after prep)
+лет|let|years (gen pl)
+боже|bozhe|God (vocative)
+них|nikh|them (prep after prep)
+сэр|sehr|sir
+ведь|ved'|after all, you see
+мистер|mister|mister
+жизнь|zhizn'|life
+потом|potom|then, later
+ней|nej|her (instr/dat/prep after prep)
+такой|takoj|such, such a (masc)
+который|kotoryj|which, who (masc)
+всех|vsekh|all (gen/acc/prep pl)
+через|cherez|through, across
+им|im|them (dat), or him (instr)
+возможно|vozmozhno|possibly, maybe
+немного|nemnogo|a little
+такое|takoe|such, such a (neut)
+слишком|slishkom|too, too much
+себе|sebe|oneself (dat/prep)
+зачем|zachem|why, what for
+должна|dolzhna|must (fem)
+моей|moej|my (fem gen/dat/instr/prep)
+люди|lyudi|people
+знаете|znaete|you know (formal/pl)
+этой|ehtoj|this (fem gen/dat/instr/prep)
+думаешь|dumaesh'|you think (sg)
+свою|svoyu|one's own (fem acc)
+точно|tochno|exactly, precisely
+человек|chelovek|person, human
+твоя|tvoya|your (fem sg)
+под|pod|under
+сказала|skazala|said (fem)
+назад|nazad|back, ago
+эту|ehtu|this (fem acc)
+можем|mozhem|we can
+случилось|sluchilos'|happened (neut)
+мама|mama|mom, mother
+мог|mog|could (masc)
+вместе|vmeste|together
+отец|otets|father
+сделал|sdelal|did (masc)
+мои|moi|my (pl)
+кажется|kazhetsya|it seems
+друг|drug|friend
+куда|kuda|where to
+никто|nikto|no one
+поэтому|poehtomu|therefore, so
+эта|ehta|this (fem)
+которые|kotorye|which, who (pl)
+два|dva|two (masc/neut)
+тот|tot|that (masc)
+сколько|skol'ko|how much, how many
+понимаю|ponimayu|I understand
+снова|snova|again
+жизни|zhizni|of life (gen), lives (nom pl)
+нравится|nravitsya|to like (it pleases)
+людей|lyudej|of people (gen)
+помочь|pomoch'|to help
+видел|videl|saw (masc)
+люблю|lyublyu|I love
+хочет|khochet|he/she wants
+место|mesto|place
+знать|znat'|to know
+прости|prosti|sorry, forgive (sg)
+отлично|otlichno|excellent, great
+похоже|pokhozhe|looks like, seems
+парень|paren'|guy, boy
+домой|domoj|home (to)
+всем|vsem|to all (dat pl)
+деньги|den'gi|money
+иди|idi|go (sg)
+времени|vremeni|of time (gen)
+дома|doma|at home
+именно|imenno|exactly
+доктор|doktor|doctor
+думал|dumal|thought (masc)
+говорил|govoril|spoke, said (masc)
+делаешь|delaesh'|you do (sg)
+будем|budem|we will
+прямо|pryamo|straight, directly
+стоит|stoit|costs, stands, is worth
+поговорить|pogovorit'|to talk
+найти|najti|to find
+разве|razve|really (interrogative)
+слушай|slushaj|listen (sg)
+своей|svoej|one's own (fem gen/dat/instr/prep)
+лишь|lish'|only
+ага|aga|aha, yeah
+можете|mozhete|you can (formal/pl)
+простите|prostite|excuse me, sorry (formal/pl)
+хотела|khotela|wanted (fem)
+сам|sam|self, oneself (masc)
+тем|tem|that (instr), or those (dat)
+будешь|budesh'|you will (sg)
+прошу|proshu|I ask, please
+три|tri|three
+деле|dele|in fact (prep of дело)
+хотите|khotite|you want (formal/pl)
+говорить|govorit'|to speak, to talk
+давайте|davajte|let's (formal/pl)
+совсем|sovsem|completely, at all
+знал|znal|knew (masc)
+знает|znaet|he/she knows
+какой|kakoj|which, what kind (masc)
+моего|moego|my (masc/neut gen)
+скажи|skazhi|tell, say (sg)
+дом|dom|house, home
+дела|dela|things, affairs
+вами|vami|you (instr formal/pl)
+свои|svoi|one's own (pl)
+ж|zh|colloquial emphatic particle
+говорит|govorit|he/she speaks, says
+несколько|neskol'ko|several, a few
+должно|dolzhno|must (neut)
+про|pro|about
+ваш|vash|your (masc formal/pl)
+происходит|proiskhodit|is happening
+жаль|zhal'|it's a pity
+туда|tuda|there (to there)
+действительно|dejstvitel'no|really, actually
+папа|papa|dad, father
+завтра|zavtra|tomorrow
+оно|ono|it (neut)
+черт|chert|damn, devil
+одна|odna|one (fem)
+перед|pered|before, in front of
+наш|nash|our (masc)
+уверен|uveren|sure (masc)
+отсюда|otsyuda|from here
+нужна|nuzhna|needed (fem)
+самом|samom|the very (masc/neut prep)
+тех|tekh|those (gen/prep pl)
+нужен|nuzhen|needed (masc)
+свой|svoj|one's own (masc)
+мою|moyu|my (fem acc)
+кого|kogo|whom (acc/gen)
+верно|verno|correctly, true
+работу|rabotu|work (acc)
+каждый|kazhdyj|every, each
+твоей|tvoej|your (fem gen/dat/instr/prep)
+будут|budut|they will
+хватит|khvatit|enough, that's enough
+понял|ponyal|understood (masc)
+нее|nee|her (acc/gen after prep)
+уж|uzh|really (emphatic particle)
+имя|imya|name
+против|protiv|against
+пор|por|so far, since (gen)
+чём|chyom|about what (prep)
+раньше|ran'she|earlier, before
+говорю|govoryu|I speak, I say
+более|bolee|more
+надеюсь|nadeyus'|I hope
+итак|itak|so, thus
+при|pri|under, in the presence of, by
+ваша|vasha|your (fem formal/pl)
+вообще|voobshche|generally, at all
+пошли|poshli|let's go, they went
+мать|mat'|mother
+нельзя|nel'zya|not allowed, cannot
+наверное|navernoe|probably
+нами|nami|us (instr)
+твои|tvoi|your (pl)
+могли|mogli|could (pl)
+дай|daj|give (sg)
+ради|radi|for the sake of
+всю|vsyu|all (fem acc)
+ребята|rebyata|guys
+ко|ko|to (variant of к)
+хотя|khotya|although
+понимаешь|ponimaesh'|you understand (sg)
+идти|idti|to go (on foot)
+этих|ehtikh|these (gen/prep pl)
+откуда|otkuda|from where
+такая|takaya|such, such a (fem)
+ясно|yasno|clear, clearly
+другой|drugoj|other, another (masc)
+извините|izvinite|excuse me, sorry (formal/pl)
+вижу|vizhu|I see
+видеть|videt'|to see
+над|nad|above, over
+могут|mogut|they can
+равно|ravno|all the same, equally
+мисс|miss|miss
+скоро|skoro|soon
+будто|budto|as if
+зовут|zovut|they call, is called
+виду|vidu|in mind, in view (иметь в виду = to have in mind)
+наши|nashi|our (pl)
+думала|dumala|thought (fem)
+послушай|poslushaj|listen (sg)
+между|mezhdu|between
+своего|svoego|one's own (masc/neut gen)
+вопрос|vopros|question
+этому|ehtomu|this (masc/neut dat)
+почти|pochti|almost
+года|goda|of the year (gen)
+человека|cheloveka|of a person (gen)
+которая|kotoraya|which, who (fem)
+подожди|podozhdi|wait (sg)
+руки|ruki|hands (nom/acc pl)
+нормально|normal'no|normally, OK
+такие|takie|such (pl)
+возьми|voz'mi|take (sg)
+минут|minut|minutes (gen pl)
+извини|izvini|sorry (sg informal)
+вещи|veshchi|things
+могла|mogla|could (fem)
+смотри|smotri|look (sg)
+хоть|khot'|at least, although
+работа|rabota|work, job
+пару|paru|a couple (acc)
+сын|syn|son
+ваше|vashe|your (neut formal/pl)
+дня|dnya|of the day (gen)
+пора|pora|time to
+неё|neyo|her (acc/gen after prep)
+жить|zhit'|to live
+видишь|vidish'|you see (sg)
+достаточно|dostatochno|enough
+господи|gospodi|Lord (vocative), good God
+быстро|bystro|quickly, fast
+твою|tvoyu|your (fem acc)
+весь|ves'|all, whole (masc)
+убить|ubit'|to kill
+ночь|noch'|night
+говоришь|govorish'|you speak, you say (sg)
+собой|soboj|oneself (instr)
+скажу|skazhu|I will say
+готов|gotov|ready (masc)
+слышал|slyshal|heard (masc)
+какая|kakaya|which, what kind (fem)
+посмотри|posmotri|look (sg)
+первый|pervyj|first (masc)
+самое|samoe|the very (neut)
+видела|videla|saw (fem)
+пусть|pust'|let, may
+месте|meste|in a place (prep of место)
+нашли|nashli|found (pl)
+сказали|skazali|said (pl)
+плохо|plokho|bad, badly
+смогу|smogu|I will be able
+ваши|vashi|your (pl formal)
+отца|ottsa|of father (gen)
+детей|detej|of children (gen)
+знаем|znaem|we know
+рад|rad|glad (masc)
+прав|prav|right, correct (masc)
+никаких|nikakikh|no, none (gen/prep pl)
+имею|imeyu|I have
+миссис|missis|missus, Mrs.
+иногда|inogda|sometimes
+смерти|smerti|of death (gen)
+своих|svoikh|one's own (gen/prep pl)
+пойду|pojdu|I will go
+брат|brat|brother
+вроде|vrode|like, sort of
+рядом|ryadom|nearby, next to
+мир|mir|world, peace
+произошло|proizoshlo|happened (neut)
+которую|kotoruyu|which, who (fem acc)
+сделала|sdelala|did (fem)
+говорила|govorila|spoke (fem)
+знала|znala|knew (fem)
+мое|moe|my (neut)
+одного|odnogo|one (masc/neut gen)
+таким|takim|such (masc/neut instr)
+помощь|pomoshch'|help
+такого|takogo|such (masc/neut gen)
+кем|kem|whom (instr)
+насчет|naschet|regarding, about
+вчера|vchera|yesterday
+случае|sluchae|in case (prep of случай)
+увидеть|uvidet'|to see
+нашей|nashej|our (fem gen/dat/instr/prep)
+говорят|govoryat|they speak, they say
+правильно|pravil'no|correctly, right
+убил|ubil|killed (masc)
+одно|odno|one (neut)
+пойти|pojti|to go
+друга|druga|of a friend (gen)
+сама|sama|self, oneself (fem)
+долго|dolgo|for a long time
+работать|rabotat'|to work
+дверь|dver'|door
+делает|delaet|he/she does
+женщина|zhenshchina|woman
+важно|vazhno|important, importantly
+кроме|krome|except, besides
+будь|bud'|be (imperative sg)
+собираюсь|sobirayus'|I am going to
+вашей|vashej|your (fem gen/dat/instr/prep formal)
+нужны|nuzhny|needed (pl)
+здорово|zdorovo|great, cool
+номер|nomer|number
+проблема|problema|problem
+проблемы|problemy|problems
+денег|deneg|of money (gen)
+чёрт|chyort|damn, devil
+хороший|khoroshij|good (masc)
+твоего|tvoego|your (masc/neut gen)
+одну|odnu|one (fem acc)
+дальше|dal'she|further
+вернуться|vernut'sya|to return
+давно|davno|long ago
+последний|poslednij|last (masc)
+ночи|nochi|of the night (gen)
+узнать|uznat'|to find out
+уверена|uverena|sure (fem)
+машину|mashinu|car (acc)
+права|prava|rights, right (fem)
+пять|pyat'|five
+моих|moikh|my (gen/prep pl)
+также|takzhe|also
+тому|tomu|to that (dat)
+вечером|vecherom|in the evening
+дети|deti|children
+опять|opyat'|again
+серьезно|ser'ezno|seriously
+работает|rabotaet|works, is working
+своим|svoim|one's own (masc/neut instr)
+сначала|snachala|at first
+две|dve|two (fem)
+одной|odnoj|one (fem gen/dat/instr/prep)
+моим|moim|my (masc/neut instr)
+те|te|those (pl)
+жена|zhena|wife
+думаете|dumaete|you think (formal/pl)
+помнишь|pomnish'|you remember (sg)
+глаза|glaza|eyes
+ними|nimi|them (instr after prep)
+чувак|chuvak|dude, guy
+ночью|noch'yu|at night
+чувствую|chuvstvuyu|I feel
+взять|vzyat'|to take
+сразу|srazu|at once, immediately
+утром|utrom|in the morning
+часть|chast'|part
+придется|pridetsya|will have to
+стать|stat'|to become
+идея|ideya|idea
+дорогая|dorogaya|dear (fem), expensive (fem)
+прекрасно|prekrasno|wonderfully, fine
+слова|slova|words, of a word (gen)
+сделали|sdelali|did (pl)
+видели|videli|saw (pl)
+наша|nasha|our (fem)
+сердце|serdtse|heart
+помню|pomnyu|I remember
+парня|parnya|of a guy (gen)
+момент|moment|moment
+уходить|ukhodit'|to leave, to go away

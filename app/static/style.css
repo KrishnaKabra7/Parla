@@ -122,3 +122,13 @@ a { color: var(--accent); }
 
 .nav-links { text-align: center; margin-top: 3rem; }
 
+.mode-toggle { display: flex; gap: 0.25rem; margin-bottom: 1rem; }
+.mode-toggle button {
+    flex: 1; padding: 0.4rem; min-height: 0; font-size: 0.9rem;
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+}
+.mode-toggle button.active { background: var(--border); color: var(--fg); }
+.prompt { font-size: 1.5rem; text-align: center; margin: 1rem 0; }
+.reveal .tok.bad { color: #f87171; }
+
+

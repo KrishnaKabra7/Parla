@@ -1,10 +1,19 @@
 <div id="card" class="card">
-{% if sentence_id %}
+{% if card_type == "voice" %}
     <audio id="audio" src="/audio/{{ audio }}" autoplay></audio>
     <button type="button" class="replay" onclick="document.getElementById('audio').play()" aria-label="replay">▶</button>
     <form hx-post="/review" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner" autocomplete="off">
         <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
         <input type="text" name="typed" autofocus placeholder="type what you heard">
+        <button type="submit">check</button>
+    </form>
+{% elif card_type == "text" %}
+    <p class="prompt">{{ prompt }}</p>
+    <p class="muted">answer in {{ hint_lang }}</p>
+    <form hx-post="/review/text" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner" autocomplete="off">
+        <input type="hidden" name="known_word_id" value="{{ known_word_id }}">
+        <input type="hidden" name="direction" value="{{ direction }}">
+        <input type="text" name="typed" autofocus placeholder="type the translation">
         <button type="submit">check</button>
     </form>
 {% else %}

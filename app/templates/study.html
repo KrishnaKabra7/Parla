@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
+<form class="mode-toggle" method="post">
+    {% for m in ["mixed", "voice", "text"] %}
+    <button type="submit" formaction="/mode/{{ m }}"{% if mode == m %} class="active"{% endif %}>{{ m }}</button>
+    {% endfor %}
+</form>
 {% include "_card.html" %}
 <div id="spinner" class="htmx-indicator spinner">generating…</div>
-<p class="muted nav-links"><a href="/words">words</a> · <a href="/stats">stats</a></p>
+<p class="muted nav-links">
+    <a href="/words">words</a> · <a href="/stats">stats</a> · <a href="/known/add">add word</a>
+</p>
 <script>
 document.addEventListener('keydown', (e) => {
     if (e.target.matches('input,textarea')) return;

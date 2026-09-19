@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Add known word</h1>
+{% if message %}<p class="muted">{{ message }}</p>{% endif %}
+<form method="post" action="/known/add" autocomplete="off">
+    <label>Cyrillic <input type="text" name="cyrillic" required autofocus></label>
+    <label>Latin <input type="text" name="latin" required></label>
+    <label>English <input type="text" name="english" required placeholder="gloss1, gloss2"></label>
+    <button type="submit">add</button>
+</form>
+<p class="muted nav-links"><a href="/study">back to study</a></p>
+{% endblock %}

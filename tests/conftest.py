@@ -38,5 +38,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     main.app.dependency_overrides[main.get_anthropic] = lambda: fake_client
 
     with TestClient(main.app) as c:
+        # Existing tests assume voice-card behavior; new text/mixed tests override.
+        c.cookies.set("slux_mode", "voice")
         c.fake_client = fake_client  # type: ignore[attr-defined]
         yield c

@@ -1,0 +1,19 @@
+<div id="card" class="card">
+    <p class="reveal">
+        <span class="tok {% if correct %}good{% else %}bad{% endif %}">{{ cyrillic }}</span>
+    </p>
+    <p class="translit">{{ latin }}</p>
+    <p class="gloss">{{ english }}</p>
+    {% if typed %}<p class="muted">you typed: {{ typed }}</p>{% endif %}
+    <form hx-post="/grade/text" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner">
+        <input type="hidden" name="known_word_id" value="{{ known_word_id }}">
+        <input type="hidden" name="direction" value="{{ direction }}">
+        <input type="hidden" name="typed" value="{{ typed }}">
+        <div class="grades">
+            <button type="submit" name="grade" value="0" class="g-again">Again</button>
+            <button type="submit" name="grade" value="3" class="g-hard">Hard</button>
+            <button type="submit" name="grade" value="4" class="g-good">Good</button>
+            <button type="submit" name="grade" value="5" class="g-easy">Easy</button>
+        </div>
+    </form>
+</div>
