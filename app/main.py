@@ -2,6 +2,7 @@ import os
 import random
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
+from functools import lru_cache
 from pathlib import Path
 
 from anthropic import Anthropic
@@ -56,7 +57,9 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.mount("/audio", StaticFiles(directory=AUDIO_DIR, check_dir=False), name="audio")
 
 
+@lru_cache(maxsize=1)
 def get_anthropic() -> Anthropic:
+    # ~250ms constructor: cache so per-request Depends doesn't rebuild each time.
     return Anthropic()
 
 
@@ -270,24 +273,41 @@ def review(
 def words_page(
     request: Request,
     q: str = "",
+    kind: str = "voice",
     user_id: int = Depends(require_user),
 ):
+    if kind not in ("voice", "text"):
+        kind = "voice"
     like = f"%{q.strip().lower()}%"
     conn = db.connect()
     try:
-        rows = conn.execute(
-            """
-            SELECT w.id, w.lemma, w.gloss_en, uw.status, uw.ef, uw.due_at
-            FROM user_words uw JOIN words w ON w.id = uw.word_id
-            WHERE uw.user_id = ? AND w.lang = ? AND LOWER(w.lemma) LIKE ?
-            ORDER BY uw.due_at IS NULL, uw.due_at ASC
-            """,
-            (user_id, LANG, like),
-        ).fetchall()
+        if kind == "voice":
+            rows = conn.execute(
+                """
+                SELECT w.id, w.lemma, w.gloss_en, uw.status, uw.ef, uw.due_at
+                FROM user_words uw JOIN words w ON w.id = uw.word_id
+                WHERE uw.user_id = ? AND w.lang = ? AND LOWER(w.lemma) LIKE ?
+                ORDER BY uw.due_at IS NULL, uw.due_at ASC
+                """,
+                (user_id, LANG, like),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT kw.cyrillic, kw.latin, kw.english,
+                       CASE ukw.direction WHEN 'en_to_ru' THEN 'en→ru' ELSE 'ru→en' END AS direction,
+                       ukw.status, ukw.ef, ukw.due_at
+                FROM user_known_words ukw JOIN known_words kw ON kw.id = ukw.known_word_id
+                WHERE ukw.user_id = ? AND kw.lang = ?
+                  AND (LOWER(kw.cyrillic) LIKE ? OR LOWER(kw.english) LIKE ?)
+                ORDER BY ukw.due_at IS NULL, ukw.due_at ASC
+                """,
+                (user_id, LANG, like, like),
+            ).fetchall()
     finally:
         conn.close()
     tpl = "_word_rows.html" if request.headers.get("HX-Request") else "words.html"
-    return templates.TemplateResponse(request, tpl, {"rows": rows, "q": q})
+    return templates.TemplateResponse(request, tpl, {"rows": rows, "q": q, "kind": kind})
 
 
 @app.get("/words/{word_id}")

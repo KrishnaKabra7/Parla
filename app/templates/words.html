@@ -1,11 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>your words</h1>
+<div class="mode-toggle">
+    <a href="/words?kind=voice"><button type="button"{% if kind == 'voice' %} class="active"{% endif %}>voice</button></a>
+    <a href="/words?kind=text"><button type="button"{% if kind == 'text' %} class="active"{% endif %}>text</button></a>
+</div>
 <input type="search" name="q" value="{{ q }}" placeholder="search…"
-       hx-get="/words" hx-target="#rows" hx-swap="innerHTML"
+       hx-get="/words?kind={{ kind }}" hx-target="#rows" hx-swap="innerHTML"
        hx-trigger="keyup changed delay:200ms" autofocus autocomplete="off">
 <table class="words">
+    {% if kind == "voice" %}
     <thead><tr><th>lemma</th><th>gloss</th><th>status</th><th>ef</th><th>due</th></tr></thead>
+    {% else %}
+    <thead><tr><th>cyrillic</th><th>english</th><th>dir</th><th>status</th><th>ef</th><th>due</th></tr></thead>
+    {% endif %}
     <tbody id="rows">
         {% include "_word_rows.html" %}
     </tbody>

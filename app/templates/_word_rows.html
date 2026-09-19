@@ -1,3 +1,4 @@
+{% if kind == "voice" %}
 {% for r in rows %}
 <tr>
     <td><a href="/words/{{ r.id }}">{{ r.lemma }}</a></td>
@@ -9,3 +10,17 @@
 {% else %}
 <tr><td colspan="5" class="muted">no words yet — start a session in <a href="/study">study</a>.</td></tr>
 {% endfor %}
+{% else %}
+{% for r in rows %}
+<tr>
+    <td>{{ r.cyrillic }}</td>
+    <td class="muted">{{ r.english }}</td>
+    <td class="muted">{{ r.direction }}</td>
+    <td>{{ r.status }}</td>
+    <td class="muted">{{ "%.2f"|format(r.ef) }}</td>
+    <td class="muted">{{ r.due_at[:10] if r.due_at else "—" }}</td>
+</tr>
+{% else %}
+<tr><td colspan="6" class="muted">no text-mode words yet — switch to <a href="/study">study</a> and try text mode.</td></tr>
+{% endfor %}
+{% endif %}
