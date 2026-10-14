@@ -1,7 +1,10 @@
 <div id="card" class="card">
     {% if audio %}
     <audio id="audio" src="/audio/{{ audio }}" preload="auto"></audio>
-    <button type="button" class="replay" onclick="document.getElementById('audio').play()" aria-label="replay">▶</button>
+    <div class="replay-row">
+        <button type="button" class="replay" onclick="var a=document.getElementById('audio');a.playbackRate=1;a.currentTime=0;a.play()" aria-label="replay">▶</button>
+        <button type="button" class="replay slow" onclick="var a=document.getElementById('audio');a.playbackRate=0.6;a.currentTime=0;a.play()" aria-label="replay slow">🐢</button>
+    </div>
     {% endif %}
     <p class="reveal">
 {%- for tok in tokens -%}
@@ -10,6 +13,7 @@
     </p>
     {% if latin %}<p class="translit">{{ latin }}</p>{% endif %}
     {% if gloss %}<p class="gloss">{{ gloss }}</p>{% endif %}
+    {% if typed %}<p class="typed">you typed: {{ typed }}</p>{% endif %}
     <form hx-post="/grade" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner">
         <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
         <input type="hidden" name="typed" value="{{ typed }}">

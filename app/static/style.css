@@ -68,11 +68,12 @@ form > * + * {
 .muted { color: var(--muted); }
 
 .card { padding: 1rem 0; }
+.replay-row { display: flex; gap: 0.75rem; justify-content: center; margin: 1.5rem 0; }
 .replay {
-    display: block; margin: 1.5rem auto;
     width: 4.5rem; height: 4.5rem; border-radius: 50%;
     font-size: 1.5rem; background: var(--border);
 }
+.replay.slow { font-size: 1.3rem; }
 .reveal { font-size: 1.25rem; line-height: 1.8; }
 .reveal .tok { color: var(--muted); }
 .reveal .tok.good { color: var(--good); }
@@ -93,6 +94,7 @@ form > * + * {
 }
 .translit { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; }
 .gloss { color: var(--muted); font-style: italic; }
+.typed { color: var(--muted); font-size: 0.95rem; margin-top: 0.75rem; }
 
 .spinner {
     display: none;

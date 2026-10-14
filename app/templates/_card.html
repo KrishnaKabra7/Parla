@@ -1,7 +1,10 @@
 <div id="card" class="card">
 {% if card_type == "voice" %}
     <audio id="audio" src="/audio/{{ audio }}" autoplay></audio>
-    <button type="button" class="replay" onclick="document.getElementById('audio').play()" aria-label="replay">▶</button>
+    <div class="replay-row">
+        <button type="button" class="replay" onclick="var a=document.getElementById('audio');a.playbackRate=1;a.currentTime=0;a.play()" aria-label="replay">▶</button>
+        <button type="button" class="replay slow" onclick="var a=document.getElementById('audio');a.playbackRate=0.6;a.currentTime=0;a.play()" aria-label="replay slow">🐢</button>
+    </div>
     <form hx-post="/review" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner" autocomplete="off">
         <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
         <input type="text" name="typed" autofocus placeholder="type what you heard">
