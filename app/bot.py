@@ -38,12 +38,38 @@ def _anthropic() -> Anthropic:
 
 
 def _ensure_user(chat_id: int) -> int:
-    name = f"tg:{chat_id}"
+    conn = db.connect()
+    try:
+        row = conn.execute(
+            "SELECT user_id FROM tg_users WHERE chat_id = ?", (chat_id,)
+        ).fetchone()
+        if row:
+            return row["user_id"]
+        name = f"tg:{chat_id}"
+        conn.execute("INSERT OR IGNORE INTO users(name) VALUES (?)", (name,))
+        urow = conn.execute("SELECT id FROM users WHERE name = ?", (name,)).fetchone()
+        conn.execute(
+            "INSERT INTO tg_users(chat_id, user_id) VALUES (?, ?)",
+            (chat_id, urow["id"]),
+        )
+        return urow["id"]
+    finally:
+        conn.close()
+
+
+def _link_user(chat_id: int, name: str) -> int:
     conn = db.connect()
     try:
         conn.execute("INSERT OR IGNORE INTO users(name) VALUES (?)", (name,))
-        row = conn.execute("SELECT id FROM users WHERE name = ?", (name,)).fetchone()
-        return row["id"]
+        urow = conn.execute("SELECT id FROM users WHERE name = ?", (name,)).fetchone()
+        conn.execute(
+            """
+            INSERT INTO tg_users(chat_id, user_id) VALUES (?, ?)
+            ON CONFLICT(chat_id) DO UPDATE SET user_id = excluded.user_id
+            """,
+            (chat_id, urow["id"]),
+        )
+        return urow["id"]
     finally:
         conn.close()
 
@@ -158,6 +184,45 @@ async def on_mode_pick(cq: CallbackQuery, state: FSMContext) -> None:
     await cq.answer(f"mode: {mode}")
     await state.clear()
     await _send_next(cq.bot, cq.message.chat.id, user_id, state)
+
+
+@router.message(Command("login"))
+async def on_login(msg: Message, state: FSMContext) -> None:
+    parts = (msg.text or "").split(maxsplit=1)
+    if len(parts) < 2 or not parts[1].strip():
+        await msg.answer("usage: /login <web username>")
+        return
+    name = parts[1].strip()
+    _link_user(msg.chat.id, name)
+    await state.clear()
+    await msg.answer(f"linked to '{name}'. use /start.")
+
+
+@router.message(Command("words"))
+async def on_words(msg: Message) -> None:
+    user_id = _ensure_user(msg.chat.id)
+    conn = db.connect()
+    try:
+        rows = conn.execute(
+            """
+            SELECT w.lemma, uw.status, uw.due_at
+            FROM user_words uw JOIN words w ON w.id = uw.word_id
+            WHERE uw.user_id = ? AND w.lang = ?
+            ORDER BY uw.due_at IS NULL, uw.due_at ASC
+            LIMIT 50
+            """,
+            (user_id, LANG),
+        ).fetchall()
+    finally:
+        conn.close()
+    if not rows:
+        await msg.answer("no words yet. use /start.")
+        return
+    lines = []
+    for r in rows:
+        due = f" (due {r['due_at'][:10]})" if r["due_at"] else ""
+        lines.append(f"{r['lemma']} — {r['status']}{due}")
+    await msg.answer("\n".join(lines))
 
 
 @router.message(Command("stats"))

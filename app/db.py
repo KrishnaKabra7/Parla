@@ -78,6 +78,11 @@ CREATE TABLE IF NOT EXISTS user_prefs (
     user_id INTEGER PRIMARY KEY REFERENCES users(id),
     mode TEXT NOT NULL DEFAULT 'mixed'
 );
+
+CREATE TABLE IF NOT EXISTS tg_users (
+    chat_id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id)
+);
 """
 
 
