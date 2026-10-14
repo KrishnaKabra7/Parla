@@ -73,6 +73,11 @@ CREATE TABLE IF NOT EXISTS user_known_words (
     PRIMARY KEY (user_id, known_word_id, direction)
 );
 CREATE INDEX IF NOT EXISTS ix_user_known_words_due ON user_known_words(user_id, due_at);
+
+CREATE TABLE IF NOT EXISTS user_prefs (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id),
+    mode TEXT NOT NULL DEFAULT 'mixed'
+);
 """
 
 

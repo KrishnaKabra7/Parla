@@ -6,13 +6,13 @@ from functools import lru_cache
 from pathlib import Path
 
 from anthropic import Anthropic
-from fastapi import BackgroundTasks, Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi import BackgroundTasks, Depends, FastAPI, Form, Header, HTTPException, Request
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeSerializer
 
-from app import db, srs, study, text_study
+from app import bot as tg, db, srs, study, text_study
 from app.langs import LANGS
 from app.translit import to_cyrillic, to_latin
 
@@ -30,9 +30,15 @@ DEFAULT_MODE = "mixed"
 _serializer = URLSafeSerializer(SECRET_KEY, salt="slux-session")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
+TG_WEBHOOK_PATH = "/tg/webhook"
+_tg_bot: object | None = None
+_tg_dp: object | None = None
+_tg_webhook_secret: str | None = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _tg_bot, _tg_dp, _tg_webhook_secret
     AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     conn = db.connect()
     db.init_schema(conn)
@@ -49,7 +55,21 @@ async def lifespan(app: FastAPI):
     if orphans:
         conn.executemany("DELETE FROM sentences WHERE id = ?", orphans)
     conn.close()
+
+    _tg_bot = tg.build_bot()
+    if _tg_bot is not None:
+        _tg_dp = tg.build_dispatcher()
+        _tg_webhook_secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET")
+        public = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("TG_WEBHOOK_URL")
+        if public:
+            await _tg_bot.set_webhook(
+                url=public.rstrip("/") + TG_WEBHOOK_PATH,
+                secret_token=_tg_webhook_secret,
+                drop_pending_updates=True,
+            )
     yield
+    if _tg_bot is not None:
+        await _tg_bot.session.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -96,6 +116,23 @@ def require_user(request: Request) -> int:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post(TG_WEBHOOK_PATH)
+async def tg_webhook(
+    request: Request,
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+):
+    if _tg_bot is None or _tg_dp is None:
+        raise HTTPException(503, "bot not configured")
+    if _tg_webhook_secret and x_telegram_bot_api_secret_token != _tg_webhook_secret:
+        raise HTTPException(401, "bad secret")
+    from aiogram.types import Update
+
+    payload = await request.json()
+    update = Update.model_validate(payload, context={"bot": _tg_bot})
+    await _tg_dp.feed_webhook_update(_tg_bot, update)
+    return JSONResponse({"ok": True})
 
 
 @app.get("/")
