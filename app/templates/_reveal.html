@@ -5,7 +5,7 @@
     {% endif %}
     <p class="reveal">
 {%- for tok in tokens -%}
-<span class="tok{% if tok.matched %} good{% endif %}{% if tok.is_target %} target{% endif %}">{{ tok.text }}</span>{{ " " }}
+<span class="tok{% if tok.matched %} good{% endif %}{% if tok.is_target %} target{% endif %}{% if tok.flag_word_id %} flag{% endif %}"{% if tok.flag_word_id %} data-word-id="{{ tok.flag_word_id }}"{% endif %}>{{ tok.text }}</span>{{ " " }}
 {%- endfor -%}
     </p>
     {% if latin %}<p class="translit">{{ latin }}</p>{% endif %}
@@ -13,6 +13,7 @@
     <form hx-post="/grade" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner">
         <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
         <input type="hidden" name="typed" value="{{ typed }}">
+        <div id="flagged" hidden></div>
         <div class="grades">
             <button type="submit" name="grade" value="0" class="g-again">Again</button>
             <button type="submit" name="grade" value="3" class="g-hard">Hard</button>

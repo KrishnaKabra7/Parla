@@ -77,8 +77,10 @@ async def ensure_sentences(
         known = known_lemmas(conn, user_id, lang)
         result = gen.generate(lang, lemma, known, client=client)
         voice = LANGS[lang]["voice"]
-        for s in result.sentences:
-            audio = await tts.synthesize(s.text, voice)
+        audios = await asyncio.gather(
+            *(tts.synthesize(s.text, voice) for s in result.sentences)
+        )
+        for s, audio in zip(result.sentences, audios):
             conn.execute(
                 "INSERT INTO sentences(word_id, text, gloss_en, audio_path) VALUES (?, ?, ?, ?)",
                 (word_id, s.text, s.gloss_en, audio.name),
@@ -113,12 +115,45 @@ class Token:
     text: str
     matched: bool
     is_target: bool
+    flag_word_id: int | None = None
 
 
-def diff_and_highlight(truth: str, typed: str, target_lemma: str) -> list[Token]:
+def user_word_lemmas(conn: Connection, user_id: int, lang: str) -> list[tuple[int, str]]:
+    rows = conn.execute(
+        """
+        SELECT w.id, w.lemma FROM user_words uw
+        JOIN words w ON w.id = uw.word_id
+        WHERE uw.user_id = ? AND w.lang = ?
+        """,
+        (user_id, lang),
+    ).fetchall()
+    return [(r["id"], r["lemma"]) for r in rows]
+
+
+def _flag_for(norm_tok: str, target_stem: str, lemmas: list[tuple[int, str]]) -> int | None:
+    best_id, best_len = None, 0
+    for wid, lemma in lemmas:
+        stem = lemma.lower()[:4]
+        if stem == target_stem:
+            continue
+        if norm_tok.startswith(stem) and len(stem) > best_len:
+            best_id, best_len = wid, len(stem)
+    return best_id
+
+
+def diff_and_highlight(
+    truth: str,
+    typed: str,
+    target_lemma: str,
+    user_lemmas: list[tuple[int, str]] | None = None,
+) -> list[Token]:
     typed_set = {_norm(t) for t in to_cyrillic(typed).split() if _norm(t)}
     stem = target_lemma.lower()[:4]
-    return [
-        Token(text=tok, matched=_norm(tok) in typed_set, is_target=_norm(tok).startswith(stem))
-        for tok in truth.split()
-    ]
+    lemmas = user_lemmas or []
+    out: list[Token] = []
+    for tok in truth.split():
+        n = _norm(tok)
+        is_target = n.startswith(stem)
+        flag_id = None if is_target else _flag_for(n, stem, lemmas)
+        out.append(Token(text=tok, matched=n in typed_set, is_target=is_target, flag_word_id=flag_id))
+    return out

@@ -82,6 +82,15 @@ form > * + * {
     text-underline-offset: 4px;
     text-decoration-thickness: 2px;
 }
+.reveal .tok.flag {
+    cursor: pointer;
+    border-bottom: 1px dashed var(--border);
+}
+.reveal .tok.flag.missed {
+    color: #f87171;
+    text-decoration: line-through;
+    border-bottom-color: #f87171;
+}
 .translit { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; }
 .gloss { color: var(--muted); font-style: italic; }
 

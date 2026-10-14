@@ -21,5 +21,23 @@ document.addEventListener('keydown', (e) => {
         if (btn) { btn.click(); e.preventDefault(); }
     }
 });
+document.addEventListener('click', (e) => {
+    const span = e.target.closest('.tok.flag');
+    if (!span) return;
+    const wid = span.dataset.wordId;
+    const holder = document.getElementById('flagged');
+    if (!holder) return;
+    const existing = holder.querySelector(`input[value="${wid}"]`);
+    span.classList.toggle('missed');
+    if (existing) {
+        existing.remove();
+    } else {
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'flagged_word_ids';
+        inp.value = wid;
+        holder.appendChild(inp);
+    }
+});
 </script>
 {% endblock %}

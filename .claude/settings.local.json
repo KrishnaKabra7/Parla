@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(uv --version)",
-      "Bash(python -c \"import sys; print\\(sys.executable\\)\")"
+      "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(git *)",
+      "Bash('.venv\\\\Scripts\\\\python.exe' -c ' *)",
+      "Bash(\".venv\\\\Scripts\\\\python.exe\" -m pytest tests/ -q)"
     ]
   }
 }

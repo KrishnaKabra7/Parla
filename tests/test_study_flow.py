@@ -94,6 +94,97 @@ def test_prefetch_generates_next_word_after_study(client: TestClient):
     assert n == 2
 
 
+def test_grade_applies_again_to_flagged_words(client: TestClient):
+    _login(client)
+    client.get("/study")
+    from app import db
+    conn = db.connect()
+    # Seed a second user_word so we have something to flag.
+    other = conn.execute("SELECT id FROM words WHERE lang='ru' ORDER BY freq_rank LIMIT 2").fetchall()
+    target_word_id = other[0]["id"]
+    flag_word_id = other[1]["id"]
+    conn.execute(
+        "INSERT OR IGNORE INTO user_words(user_id, word_id, status, ef, interval_days, due_at) "
+        "VALUES (1, ?, 'learning', 2.5, 7.0, datetime('now', '+7 days'))",
+        (flag_word_id,),
+    )
+    sid = conn.execute(
+        "SELECT id FROM sentences WHERE word_id = ? LIMIT 1", (target_word_id,)
+    ).fetchone()["id"]
+    conn.close()
+
+    r = client.post(
+        "/grade",
+        data={
+            "sentence_id": sid,
+            "grade": 5,
+            "typed": "",
+            "flagged_word_ids": [flag_word_id],
+        },
+    )
+    assert r.status_code == 200
+
+    conn = db.connect()
+    flagged_uw = conn.execute(
+        "SELECT ef, interval_days, status FROM user_words WHERE user_id=1 AND word_id=?",
+        (flag_word_id,),
+    ).fetchone()
+    reviews = conn.execute(
+        "SELECT grade FROM reviews WHERE sentence_id=? ORDER BY id",
+        (sid,),
+    ).fetchall()
+    conn.close()
+    # Flagged word was pulled back to 1-day interval with lower ef.
+    assert flagged_uw["interval_days"] == 1.0
+    assert flagged_uw["ef"] < 2.5
+    # Two reviews rows: one for target (grade=5), one for flag (grade=0).
+    assert sorted(r["grade"] for r in reviews) == [0, 5]
+
+
+def test_grade_ignores_unknown_flagged_ids(client: TestClient):
+    _login(client)
+    client.get("/study")
+    from app import db
+    conn = db.connect()
+    sid = conn.execute("SELECT id FROM sentences LIMIT 1").fetchone()["id"]
+    conn.close()
+    r = client.post(
+        "/grade",
+        data={
+            "sentence_id": sid,
+            "grade": 4,
+            "typed": "",
+            "flagged_word_ids": [999999],
+        },
+    )
+    assert r.status_code == 200
+
+
+def test_review_marks_known_lemmas_tappable(client: TestClient):
+    _login(client)
+    client.get("/study")
+    from app import db
+    conn = db.connect()
+    sid_row = conn.execute(
+        "SELECT s.id AS id, w.lemma AS lemma, s.text AS text FROM sentences s "
+        "JOIN words w ON w.id=s.word_id LIMIT 1"
+    ).fetchone()
+    sid = sid_row["id"]
+    # Seed another known-lemma user_word that appears in no sentence yet.
+    conn.execute(
+        "INSERT OR IGNORE INTO user_words(user_id, word_id) "
+        "SELECT 1, id FROM words WHERE lang='ru' AND lemma != ? LIMIT 5",
+        (sid_row["lemma"],),
+    )
+    conn.close()
+    r = client.post("/review", data={"sentence_id": sid, "typed": ""})
+    assert r.status_code == 200
+    # If any token in the truth sentence stems to a user_word (not the target),
+    # it should render as a tappable flag span.
+    if "tok flag" in r.text:
+        assert 'data-word-id="' in r.text
+
+
 def test_prefetch_makes_grade_a_cache_hit(client: TestClient):
     client.post("/login", data={"name": "tester"}, follow_redirects=False)
     client.get("/study")

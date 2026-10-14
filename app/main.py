@@ -250,11 +250,12 @@ def review(
             """,
             (sentence_id,),
         ).fetchone()
+        if row is None:
+            raise HTTPException(404)
+        user_lemmas = study.user_word_lemmas(conn, user_id, LANG)
     finally:
         conn.close()
-    if row is None:
-        raise HTTPException(404)
-    tokens = study.diff_and_highlight(row["text"], typed, row["lemma"])
+    tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], user_lemmas)
     return templates.TemplateResponse(
         request,
         "_reveal.html",
@@ -390,6 +391,7 @@ async def grade(
     sentence_id: int = Form(...),
     grade: int = Form(...),
     typed: str = Form(""),
+    flagged_word_ids: list[int] = Form(default=[]),
     user_id: int = Depends(require_user),
     client: Anthropic = Depends(get_anthropic),
 ):
@@ -425,6 +427,32 @@ async def grade(
             "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, ?, ?, ?)",
             (user_id, sentence_id, grade, typed),
         )
+        for fid in flagged_word_ids:
+            if fid == word_id:
+                continue
+            fuw = conn.execute(
+                "SELECT ef, interval_days FROM user_words WHERE user_id=? AND word_id=?",
+                (user_id, fid),
+            ).fetchone()
+            if fuw is None:
+                continue
+            f_ef, f_int, f_due, f_status = srs.review(fuw["ef"], fuw["interval_days"], 0)
+            conn.execute(
+                """
+                INSERT INTO user_words(user_id, word_id, status, ef, interval_days, due_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, word_id) DO UPDATE SET
+                    status = excluded.status,
+                    ef = excluded.ef,
+                    interval_days = excluded.interval_days,
+                    due_at = excluded.due_at
+                """,
+                (user_id, fid, f_status, f_ef, f_int, f_due.isoformat()),
+            )
+            conn.execute(
+                "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, ?, ?, ?)",
+                (user_id, sentence_id, 0, typed),
+            )
         ctx = await _prepare_card(conn, user_id, client, mode)
     finally:
         conn.close()
