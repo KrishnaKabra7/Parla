@@ -2,6 +2,8 @@ import os
 import sqlite3
 from pathlib import Path
 
+from app.langs import LANGS
+
 DEFAULT_DB_PATH = "data/slux.db"
 
 SCHEMA = """
@@ -55,11 +57,11 @@ CREATE INDEX IF NOT EXISTS ix_reviews_user_time ON reviews(user_id, created_at);
 CREATE TABLE IF NOT EXISTS known_words (
     id INTEGER PRIMARY KEY,
     lang TEXT NOT NULL DEFAULT 'ru',
-    cyrillic TEXT NOT NULL,
-    latin TEXT NOT NULL,
+    target TEXT NOT NULL,
+    romanized TEXT NOT NULL,
     english TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (lang, cyrillic)
+    UNIQUE (lang, target)
 );
 
 CREATE TABLE IF NOT EXISTS user_known_words (
@@ -77,6 +79,12 @@ CREATE INDEX IF NOT EXISTS ix_user_known_words_due ON user_known_words(user_id, 
 CREATE TABLE IF NOT EXISTS user_prefs (
     user_id INTEGER PRIMARY KEY REFERENCES users(id),
     mode TEXT NOT NULL DEFAULT 'mixed'
+);
+
+CREATE TABLE IF NOT EXISTS user_langs (
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    lang TEXT NOT NULL,
+    PRIMARY KEY (user_id, lang)
 );
 
 CREATE TABLE IF NOT EXISTS tg_users (
@@ -104,8 +112,55 @@ def connect(db_path: Path | str | None = None) -> sqlite3.Connection:
 
 
 def init_schema(conn: sqlite3.Connection) -> None:
+    had_user_langs = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_langs'"
+    ).fetchone() is not None
     conn.executescript(SCHEMA)
     _migrate_reviews_sentence_fk(conn)
+    _migrate_known_words_columns(conn)
+    if not had_user_langs:
+        _backfill_user_langs(conn)
+
+
+def _migrate_known_words_columns(conn: sqlite3.Connection) -> None:
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(known_words)")}
+    if "cyrillic" not in cols:
+        return
+    conn.execute("ALTER TABLE known_words RENAME COLUMN cyrillic TO target")
+    conn.execute("ALTER TABLE known_words RENAME COLUMN latin TO romanized")
+    conn.execute("UPDATE user_known_words SET direction = 'en_to_tl' WHERE direction = 'en_to_ru'")
+    conn.execute("UPDATE user_known_words SET direction = 'tl_to_en' WHERE direction = 'ru_to_en'")
+
+
+def _backfill_user_langs(conn: sqlite3.Connection) -> None:
+    # Users who studied before multi-language support only ever saw Russian;
+    # keep them on it instead of interrupting them with the language picker.
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO user_langs(user_id, lang)
+        SELECT user_id, 'ru' FROM user_words
+        UNION SELECT user_id, 'ru' FROM user_known_words
+        UNION SELECT user_id, 'ru' FROM reviews
+        """
+    )
+
+
+def get_langs(conn: sqlite3.Connection, user_id: int) -> list[str]:
+    rows = conn.execute("SELECT lang FROM user_langs WHERE user_id = ?", (user_id,)).fetchall()
+    chosen = {r["lang"] for r in rows}
+    return [code for code in LANGS if code in chosen]
+
+
+def set_langs(conn: sqlite3.Connection, user_id: int, langs: list[str]) -> None:
+    if not langs or any(code not in LANGS for code in langs):
+        raise ValueError(f"invalid languages: {langs!r}")
+    conn.execute("BEGIN")
+    conn.execute("DELETE FROM user_langs WHERE user_id = ?", (user_id,))
+    conn.executemany(
+        "INSERT OR IGNORE INTO user_langs(user_id, lang) VALUES (?, ?)",
+        [(user_id, code) for code in langs],
+    )
+    conn.execute("COMMIT")
 
 
 def _migrate_reviews_sentence_fk(conn: sqlite3.Connection) -> None:
@@ -139,7 +194,8 @@ def _migrate_reviews_sentence_fk(conn: sqlite3.Connection) -> None:
 
 
 def seed_known_words(conn: sqlite3.Connection, seed_file: str | Path, lang: str = "ru") -> int:
-    """Load pipe-delimited cyrillic|latin|english triples. INSERT OR IGNORE so
+    """Load pipe-delimited target|romanized|english triples (romanized may be
+    empty for Latin-script languages). INSERT OR IGNORE so
     re-runs are idempotent and file edits add new rows without touching
     existing (possibly UI-added) entries. Returns count considered (not
     necessarily inserted)."""
@@ -155,15 +211,15 @@ def seed_known_words(conn: sqlite3.Connection, seed_file: str | Path, lang: str 
             parts = line.split("|")
             if len(parts) != 3:
                 continue
-            cyr, lat, eng = (p.strip() for p in parts)
-            if not cyr or not lat or not eng:
+            target, rom, eng = (p.strip() for p in parts)
+            if not target or not eng:
                 continue
-            rows.append((lang, cyr, lat, eng))
+            rows.append((lang, target, rom, eng))
     if not rows:
         return 0
     conn.execute("BEGIN")
     conn.executemany(
-        "INSERT OR IGNORE INTO known_words(lang, cyrillic, latin, english) VALUES (?, ?, ?, ?)",
+        "INSERT OR IGNORE INTO known_words(lang, target, romanized, english) VALUES (?, ?, ?, ?)",
         rows,
     )
     conn.execute("COMMIT")
