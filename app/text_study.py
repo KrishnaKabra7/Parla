@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from sqlite3 import Connection
 
 from app.langs import LANGS
-from app.translit import to_cyrillic, to_latin
+from app.translit import has_cyrillic, to_cyrillic, to_latin
 
 EN_TO_TL = "en_to_tl"
 TL_TO_EN = "tl_to_en"
@@ -90,6 +90,9 @@ def normalize_known_word(lang: str, target: str, romanized: str) -> tuple[str, s
     target, romanized = target.strip(), romanized.strip()
     if lang != "ru":
         return target, ""
+    if target and not has_cyrillic(target):
+        romanized = romanized or target
+        target = to_cyrillic(target)
     target = target or to_cyrillic(romanized)
     return target, romanized or (to_latin(target) if target else "")
 

@@ -81,12 +81,6 @@ CREATE TABLE IF NOT EXISTS user_prefs (
     mode TEXT NOT NULL DEFAULT 'mixed'
 );
 
-CREATE TABLE IF NOT EXISTS user_langs (
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    lang TEXT NOT NULL,
-    PRIMARY KEY (user_id, lang)
-);
-
 CREATE TABLE IF NOT EXISTS tg_users (
     chat_id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id)
@@ -112,14 +106,37 @@ def connect(db_path: Path | str | None = None) -> sqlite3.Connection:
 
 
 def init_schema(conn: sqlite3.Connection) -> None:
-    had_user_langs = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_langs'"
-    ).fetchone() is not None
     conn.executescript(SCHEMA)
     _migrate_reviews_sentence_fk(conn)
-    _migrate_known_words_columns(conn)
-    if not had_user_langs:
-        _backfill_user_langs(conn)
+    _in_transaction(conn, _migrate_known_words_columns)
+    _in_transaction(conn, _create_user_langs)
+
+
+def _in_transaction(conn: sqlite3.Connection, step) -> None:
+    # Each migration step commits as a unit so a crash mid-step can't leave
+    # a half-renamed table that the "already migrated?" check then skips.
+    conn.execute("BEGIN")
+    try:
+        step(conn)
+    except BaseException:
+        conn.execute("ROLLBACK")
+        raise
+    conn.execute("COMMIT")
+
+
+def _create_user_langs(conn: sqlite3.Connection) -> None:
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='user_langs'").fetchone():
+        return
+    conn.execute(
+        """
+        CREATE TABLE user_langs (
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            lang TEXT NOT NULL,
+            PRIMARY KEY (user_id, lang)
+        )
+        """
+    )
+    _backfill_user_langs(conn)
 
 
 def _migrate_known_words_columns(conn: sqlite3.Connection) -> None:

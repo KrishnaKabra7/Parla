@@ -31,7 +31,7 @@ Rules:
 - The target word should appear in a common inflected form appropriate to the sentence, not only the citation form.
 - If the known list is empty or too small to build 3 natural sentences, generate the most natural short (4-9 word) sentences you can that use the target word, keeping them minimal and beginner-friendly."""
 
-_DE_FOLD = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
+_DE_UMLAUTS = str.maketrans({"ä": "a", "ö": "o", "ü": "u", "ß": "ss"})
 
 
 def _fold_ru(s: str) -> str:
@@ -39,7 +39,10 @@ def _fold_ru(s: str) -> str:
 
 
 def _fold_de(s: str) -> str:
-    return s.lower().translate(_DE_FOLD)
+    # Collapse "über", "ueber" and "uber" to one form so learners without a
+    # German keyboard aren't marked wrong. Applied to both sides of a compare.
+    s = s.lower().replace("ae", "a").replace("oe", "o").replace("ue", "u")
+    return s.translate(_DE_UMLAUTS)
 
 
 LANGS = {

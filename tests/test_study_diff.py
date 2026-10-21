@@ -25,3 +25,8 @@ def test_russian_diff_still_accepts_latin_input():
 def test_german_flags_known_word_stems():
     toks = diff_and_highlight("Das Haus ist groß.", "", "haus", "de", [(7, "groß")])
     assert toks[3].flag_word_id == 7
+
+
+def test_german_diff_strips_german_quotes():
+    toks = diff_and_highlight("Er sagt: „Hallo“.", "er sagt hallo", "hallo", "de")
+    assert all(t.matched for t in toks)

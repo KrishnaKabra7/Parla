@@ -177,3 +177,12 @@ def test_stats_show_known_counts_per_language(client: TestClient):
     _login(client, ["ru", "de"])
     r = client.get("/stats")
     assert "Russian" in r.text and "German" in r.text
+
+
+def test_known_add_russian_latin_in_word_field_is_transliterated(client: TestClient):
+    _login(client, ["ru"])
+    client.post("/known/add", data={"lang": "ru", "target": "koshka", "romanized": "", "english": "cat"})
+    conn = db.connect()
+    row = conn.execute("SELECT target, romanized FROM known_words WHERE english='cat'").fetchone()
+    conn.close()
+    assert (row["target"], row["romanized"]) == ("кошка", "koshka")

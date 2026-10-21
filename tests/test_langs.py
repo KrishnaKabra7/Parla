@@ -48,3 +48,10 @@ def test_startup_seeds_both_languages(client):
     assert words["ru"] == 3000
     assert words["de"] == 3000
     assert de_known == {"ja", "nein"}
+
+
+def test_german_fold_accepts_bare_vowels():
+    fold = LANGS["de"]["fold"]
+    assert fold("über") == fold("uber") == fold("ueber")
+    assert fold("schön") == fold("schon")
+    assert fold("Mädchen") == fold("madchen")

@@ -94,3 +94,19 @@ def test_set_langs_rejects_empty_and_unknown(tmp_path):
         db.set_langs(conn, 1, [])
     with pytest.raises(ValueError):
         db.set_langs(conn, 1, ["fr"])
+
+
+def test_interrupted_column_rename_is_rolled_back(old_db, monkeypatch):
+    real = db._backfill_user_langs
+
+    def boom(conn):
+        raise RuntimeError("killed mid-migration")
+
+    monkeypatch.setattr(db, "_backfill_user_langs", boom)
+    with pytest.raises(RuntimeError):
+        db.init_schema(old_db)
+    monkeypatch.setattr(db, "_backfill_user_langs", real)
+    db.init_schema(old_db)
+    assert db.get_langs(old_db, 1) == ["ru"]
+    row = old_db.execute("SELECT target, romanized FROM known_words").fetchone()
+    assert (row["target"], row["romanized"]) == ("привет", "privet")
