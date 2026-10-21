@@ -6,7 +6,6 @@ from anthropic import Anthropic
 
 from app import gen, tts
 from app.langs import LANGS
-from app.translit import to_cyrillic
 
 # Per-word locks so a background prefetch and a foreground gen for the same
 # word serialize instead of double-firing Anthropic + edge-tts.
@@ -106,8 +105,8 @@ def pick_sentence(conn: Connection, word_id: int) -> Row | None:
 _STRIP = ".,!?;:'\"()[]«»…—-"
 
 
-def _norm(tok: str) -> str:
-    return tok.strip(_STRIP).lower()
+def _norm(tok: str, lang: str) -> str:
+    return LANGS[lang]["fold"](tok.strip(_STRIP))
 
 
 @dataclass
@@ -130,10 +129,10 @@ def user_word_lemmas(conn: Connection, user_id: int, lang: str) -> list[tuple[in
     return [(r["id"], r["lemma"]) for r in rows]
 
 
-def _flag_for(norm_tok: str, target_stem: str, lemmas: list[tuple[int, str]]) -> int | None:
+def _flag_for(norm_tok: str, target_stem: str, lemmas: list[tuple[int, str]], lang: str) -> int | None:
     best_id, best_len = None, 0
     for wid, lemma in lemmas:
-        stem = lemma.lower()[:4]
+        stem = _norm(lemma, lang)[:4]
         if stem == target_stem:
             continue
         if norm_tok.startswith(stem) and len(stem) > best_len:
@@ -145,15 +144,16 @@ def diff_and_highlight(
     truth: str,
     typed: str,
     target_lemma: str,
+    lang: str,
     user_lemmas: list[tuple[int, str]] | None = None,
 ) -> list[Token]:
-    typed_set = {_norm(t) for t in to_cyrillic(typed).split() if _norm(t)}
-    stem = target_lemma.lower()[:4]
+    typed_set = {n for t in typed.split() if (n := _norm(t, lang))}
+    stem = _norm(target_lemma, lang)[:4]
     lemmas = user_lemmas or []
     out: list[Token] = []
     for tok in truth.split():
-        n = _norm(tok)
+        n = _norm(tok, lang)
         is_target = n.startswith(stem)
-        flag_id = None if is_target else _flag_for(n, stem, lemmas)
+        flag_id = None if is_target else _flag_for(n, stem, lemmas, lang)
         out.append(Token(text=tok, matched=n in typed_set, is_target=is_target, flag_word_id=flag_id))
     return out

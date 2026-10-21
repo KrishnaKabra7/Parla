@@ -86,3 +86,11 @@ def test_known_lemmas_sorted_for_stable_prefix():
     generate("ru", "x", ["c", "a", "b"], client=client)
     second_system = client.messages.parse.call_args.kwargs["system"]
     assert first_system == second_system
+
+
+def test_german_uses_german_prompt():
+    client = _mock_client(_valid_parsed("house"))
+    generate("de", "haus", ["ja"], client=client)
+    system = client.messages.parse.call_args.kwargs["system"]
+    assert "German" in system[0]["text"]
+    assert "ja" in system[1]["text"]

@@ -292,7 +292,7 @@ def review(
         user_lemmas = study.user_word_lemmas(conn, user_id, LANG)
     finally:
         conn.close()
-    tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], user_lemmas)
+    tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], LANG, user_lemmas)
     return templates.TemplateResponse(
         request,
         "_reveal.html",
