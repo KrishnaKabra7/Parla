@@ -1,0 +1,4 @@
+# Seed list for German text-to-text drills. Format: target||english
+# The middle (romanized) field is empty for Latin-script languages.
+ja||yes
+nein||no

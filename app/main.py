@@ -18,7 +18,6 @@ from app.translit import to_cyrillic, to_latin
 
 BASE_DIR = Path(__file__).parent
 AUDIO_DIR = Path("data/audio")
-KNOWN_WORDS_FILE = Path("data/known_words.txt")
 LANG = "ru"
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-not-secure-change-me")
@@ -44,7 +43,7 @@ async def lifespan(app: FastAPI):
     db.init_schema(conn)
     for lang, pack in LANGS.items():
         db.seed_words(conn, lang, pack["freq_file"])
-    db.seed_known_words(conn, KNOWN_WORDS_FILE, LANG)
+        db.seed_known_words(conn, pack["known_file"], lang)
     # Litestream restores the DB from R2 but audio files live on the ephemeral
     # disk. Drop sentence rows whose mp3 is gone so those words re-generate.
     orphans = [

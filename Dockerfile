@@ -10,6 +10,8 @@ COPY pyproject.toml ./
 COPY app ./app
 COPY data/ru_freq.txt ./data/ru_freq.txt
 COPY data/known_words.txt ./data/known_words.txt
+COPY data/de_freq.txt ./data/de_freq.txt
+COPY data/known_words_de.txt ./data/known_words_de.txt
 COPY litestream.yml /etc/litestream.yml
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 

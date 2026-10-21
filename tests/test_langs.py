@@ -36,3 +36,15 @@ def test_candidates_mixed_covers_all_pairs():
 def test_candidates_mixed_varies_first_pick():
     firsts = {candidates("mixed", ["ru", "de"], random.Random(s))[0] for s in range(50)}
     assert len(firsts) == 4
+
+
+def test_startup_seeds_both_languages(client):
+    from app import db
+
+    conn = db.connect()
+    words = {r["lang"]: r["n"] for r in conn.execute("SELECT lang, COUNT(*) AS n FROM words GROUP BY lang")}
+    de_known = {r["target"] for r in conn.execute("SELECT target FROM known_words WHERE lang = 'de'")}
+    conn.close()
+    assert words["ru"] == 3000
+    assert words["de"] == 3000
+    assert de_known == {"ja", "nein"}
