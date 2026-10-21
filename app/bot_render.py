@@ -15,10 +15,10 @@ def voice_prompt() -> str:
 
 
 def text_prompt(card: text_study.TextCard) -> str:
-    if card.direction == text_study.EN_TO_RU:
+    if card.direction == text_study.EN_TO_TL:
         prompt, hint = card.english, "Russian"
     else:
-        prompt, hint = card.cyrillic, "English"
+        prompt, hint = card.target, "English"
     return f"*{esc(prompt)}*\n_Answer in {esc(hint)}_"
 
 
@@ -44,8 +44,8 @@ def voice_reveal(tokens: list[study.Token], gloss: str) -> str:
 def text_reveal(card: text_study.TextCard, correct: bool, typed: str) -> str:
     mark = "\\✓" if correct else "\\✗"
     lines = [
-        f"{mark} *{esc(card.cyrillic)}*",
-        f"_{esc(card.latin)}_",
+        f"{mark} *{esc(card.target)}*",
+        f"_{esc(card.romanized)}_",
         esc(card.english),
     ]
     if typed:

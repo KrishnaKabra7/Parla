@@ -119,7 +119,7 @@ async def _prepare_voice(user_id: int) -> tuple[int, str] | None:
 def _prepare_text(user_id: int) -> text_study.TextCard | None:
     conn = db.connect()
     try:
-        return text_study.pick_card(conn, user_id)
+        return text_study.pick_card(conn, user_id, LANG)
     finally:
         conn.close()
 
@@ -305,7 +305,7 @@ async def on_add_cyrillic(msg: Message, state: FSMContext) -> None:
     conn = db.connect()
     try:
         cur = conn.execute(
-            "INSERT OR IGNORE INTO known_words(lang, cyrillic, latin, english) VALUES (?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO known_words(lang, target, romanized, english) VALUES (?, ?, ?, ?)",
             (LANG, cyrillic, latin, english),
         )
         if cur.rowcount:
@@ -363,23 +363,13 @@ async def on_text_answer(msg: Message, state: FSMContext) -> None:
     typed = msg.text or ""
     conn = db.connect()
     try:
-        row = conn.execute(
-            "SELECT id, cyrillic, latin, english FROM known_words WHERE id = ?",
-            (known_word_id,),
-        ).fetchone()
+        card = text_study.load_card(conn, known_word_id, direction)
     finally:
         conn.close()
-    if row is None:
+    if card is None:
         await state.clear()
         await _send_next(msg.bot, msg.chat.id, user_id, state)
         return
-    card = text_study.TextCard(
-        known_word_id=row["id"],
-        cyrillic=row["cyrillic"],
-        latin=row["latin"],
-        english=row["english"],
-        direction=direction,
-    )
     correct = text_study.check_answer(card, typed)
     text = bot_render.text_reveal(card, correct, typed)
     await msg.answer(

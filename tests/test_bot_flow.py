@@ -84,7 +84,7 @@ def test_prepare_text_returns_card(bot_setup):
     uid = bot._ensure_user(8)
     card = bot._prepare_text(uid)
     assert card is not None
-    assert card.cyrillic and card.english
+    assert card.target and card.english
 
 
 async def test_grade_callback_updates_voice_srs(bot_setup):

@@ -192,8 +192,8 @@ async def _prefetch_next(user_id: int, client: Anthropic) -> None:
 
 
 def _text_card_ctx(card: text_study.TextCard) -> dict:
-    prompt = card.english if card.direction == text_study.EN_TO_RU else card.cyrillic
-    hint = "Russian" if card.direction == text_study.EN_TO_RU else "English"
+    prompt = card.english if card.direction == text_study.EN_TO_TL else card.target
+    hint = LANGS[card.lang]["name"] if card.direction == text_study.EN_TO_TL else "English"
     return {
         "card_type": "text",
         "known_word_id": card.known_word_id,
@@ -217,7 +217,7 @@ async def _prepare_voice_card(conn, user_id: int, client: Anthropic) -> dict | N
 
 
 def _prepare_text_card(conn, user_id: int) -> dict | None:
-    card = text_study.pick_card(conn, user_id)
+    card = text_study.pick_card(conn, user_id, LANG)
     if card is None:
         return None
     return _text_card_ctx(card)
@@ -332,12 +332,12 @@ def words_page(
         else:
             rows = conn.execute(
                 """
-                SELECT kw.cyrillic, kw.latin, kw.english,
-                       CASE ukw.direction WHEN 'en_to_ru' THEN 'en→ru' ELSE 'ru→en' END AS direction,
+                SELECT kw.target, kw.romanized, kw.english,
+                       CASE ukw.direction WHEN 'en_to_tl' THEN 'en→' || kw.lang ELSE kw.lang || '→en' END AS direction,
                        ukw.status, ukw.ef, ukw.due_at
                 FROM user_known_words ukw JOIN known_words kw ON kw.id = ukw.known_word_id
                 WHERE ukw.user_id = ? AND kw.lang = ?
-                  AND (LOWER(kw.cyrillic) LIKE ? OR LOWER(kw.english) LIKE ?)
+                  AND (LOWER(kw.target) LIKE ? OR LOWER(kw.english) LIKE ?)
                 ORDER BY ukw.due_at IS NULL, ukw.due_at ASC
                 """,
                 (user_id, LANG, like, like),
@@ -499,21 +499,12 @@ async def grade(
 
 
 def _load_text_card(conn, known_word_id: int, direction: str) -> text_study.TextCard:
-    if direction not in (text_study.EN_TO_RU, text_study.RU_TO_EN):
+    if direction not in text_study.DIRECTIONS:
         raise HTTPException(400, "invalid direction")
-    row = conn.execute(
-        "SELECT id, cyrillic, latin, english FROM known_words WHERE id = ?",
-        (known_word_id,),
-    ).fetchone()
-    if row is None:
+    card = text_study.load_card(conn, known_word_id, direction)
+    if card is None:
         raise HTTPException(404)
-    return text_study.TextCard(
-        known_word_id=row["id"],
-        cyrillic=row["cyrillic"],
-        latin=row["latin"],
-        english=row["english"],
-        direction=direction,
-    )
+    return card
 
 
 @app.post("/review/text")
@@ -538,8 +529,8 @@ def review_text(
             "direction": direction,
             "typed": typed,
             "correct": correct,
-            "cyrillic": card.cyrillic,
-            "latin": card.latin,
+            "target": card.target,
+            "romanized": card.romanized,
             "english": card.english,
         },
     )
@@ -556,7 +547,7 @@ async def grade_text(
     user_id: int = Depends(require_user),
     client: Anthropic = Depends(get_anthropic),
 ):
-    if direction not in (text_study.EN_TO_RU, text_study.RU_TO_EN):
+    if direction not in text_study.DIRECTIONS:
         raise HTTPException(400, "invalid direction")
     mode = _mode(request)
     conn = db.connect()
@@ -620,7 +611,7 @@ def known_add_submit(
     conn = db.connect()
     try:
         cur = conn.execute(
-            "INSERT OR IGNORE INTO known_words(lang, cyrillic, latin, english) VALUES (?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO known_words(lang, target, romanized, english) VALUES (?, ?, ?, ?)",
             (LANG, cyrillic, latin, english),
         )
         msg = f"added {cyrillic}" if cur.rowcount else f"already exists: {cyrillic}"
