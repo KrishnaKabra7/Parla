@@ -1,6 +1,5 @@
 import logging
 import os
-import random
 from datetime import date, timedelta
 from functools import lru_cache
 
@@ -14,10 +13,8 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from anthropic import Anthropic
 
 from app import bot_render, db, srs, study, text_study
-from app.langs import LANGS
-from app.translit import to_cyrillic
+from app.langs import LANGS, candidates
 
-LANG = "ru"
 AUDIO_DIR = "data/audio"
 
 log = logging.getLogger("app.bot")
@@ -28,6 +25,7 @@ class Flow(StatesGroup):
     awaiting_voice = State()
     awaiting_text = State()
     add_latin = State()
+    add_target = State()
     add_english = State()
     add_cyrillic = State()
 
@@ -99,13 +97,29 @@ def _set_mode(user_id: int, mode: str) -> None:
         conn.close()
 
 
-async def _prepare_voice(user_id: int) -> tuple[int, str] | None:
+def _user_langs(user_id: int) -> list[str]:
     conn = db.connect()
     try:
-        item = study.pick_next(conn, user_id, LANG)
+        return db.get_langs(conn, user_id)
+    finally:
+        conn.close()
+
+
+def _set_user_langs(user_id: int, langs: list[str]) -> None:
+    conn = db.connect()
+    try:
+        db.set_langs(conn, user_id, langs)
+    finally:
+        conn.close()
+
+
+async def _prepare_voice(user_id: int, lang: str) -> tuple[int, str] | None:
+    conn = db.connect()
+    try:
+        item = study.pick_next(conn, user_id, lang)
         if item is None:
             return None
-        await study.ensure_sentences(conn, item.word_id, item.lemma, LANG, user_id, _anthropic())
+        await study.ensure_sentences(conn, item.word_id, item.lemma, lang, user_id, _anthropic())
         if item.is_new:
             study.ensure_user_word(conn, user_id, item.word_id)
         s = study.pick_sentence(conn, item.word_id)
@@ -116,30 +130,37 @@ async def _prepare_voice(user_id: int) -> tuple[int, str] | None:
         conn.close()
 
 
-def _prepare_text(user_id: int) -> text_study.TextCard | None:
+def _prepare_text(user_id: int, lang: str) -> text_study.TextCard | None:
     conn = db.connect()
     try:
-        return text_study.pick_card(conn, user_id, LANG)
+        return text_study.pick_card(conn, user_id, lang)
     finally:
         conn.close()
 
 
 async def _send_next(bot: Bot, chat_id: int, user_id: int, state: FSMContext) -> None:
-    mode = _mode(user_id)
-    kinds = [mode] if mode in ("voice", "text") else random.sample(["voice", "text"], 2)
-    for kind in kinds:
+    langs = _user_langs(user_id)
+    if not langs:
+        await state.clear()
+        await bot.send_message(
+            chat_id,
+            "pick the languages you want to practice:",
+            reply_markup=bot_render.lang_keyboard([]),
+        )
+        return
+    for kind, lang in candidates(_mode(user_id), langs):
         if kind == "voice":
-            voice = await _prepare_voice(user_id)
+            voice = await _prepare_voice(user_id, lang)
             if voice is not None:
                 sentence_id, audio_path = voice
                 path = f"{AUDIO_DIR}/{audio_path}"
                 await bot.send_audio(chat_id, FSInputFile(path))
-                await bot.send_message(chat_id, bot_render.voice_prompt(), parse_mode=ParseMode.MARKDOWN_V2)
+                await bot.send_message(chat_id, bot_render.voice_prompt(lang), parse_mode=ParseMode.MARKDOWN_V2)
                 await state.set_state(Flow.awaiting_voice)
                 await state.update_data(sentence_id=sentence_id)
                 return
         else:
-            card = _prepare_text(user_id)
+            card = _prepare_text(user_id, lang)
             if card is not None:
                 await bot.send_message(
                     chat_id,
@@ -186,6 +207,47 @@ async def on_mode_pick(cq: CallbackQuery, state: FSMContext) -> None:
     await _send_next(cq.bot, cq.message.chat.id, user_id, state)
 
 
+@router.message(Command("lang"))
+async def on_lang(msg: Message, state: FSMContext) -> None:
+    user_id = _ensure_user(msg.chat.id)
+    await msg.answer(
+        "pick languages:",
+        reply_markup=bot_render.lang_keyboard(_user_langs(user_id)),
+    )
+
+
+@router.callback_query(F.data.startswith("lang:"))
+async def on_lang_pick(cq: CallbackQuery, state: FSMContext) -> None:
+    user_id = _ensure_user(cq.message.chat.id)
+    _, code = cq.data.split(":", 1)
+    chosen = _user_langs(user_id)
+    if code == "done":
+        if not chosen:
+            await cq.answer("pick at least one language")
+            return
+        await cq.answer()
+        try:
+            await cq.message.edit_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+        await state.clear()
+        await _send_next(cq.bot, cq.message.chat.id, user_id, state)
+        return
+    if code not in LANGS:
+        await cq.answer()
+        return
+    new = [c for c in chosen if c != code] if code in chosen else chosen + [code]
+    if not new:
+        await cq.answer("keep at least one language")
+        return
+    _set_user_langs(user_id, new)
+    await cq.answer()
+    try:
+        await cq.message.edit_reply_markup(reply_markup=bot_render.lang_keyboard(new))
+    except Exception:
+        pass
+
+
 @router.message(Command("login"))
 async def on_login(msg: Message, state: FSMContext) -> None:
     parts = (msg.text or "").split(maxsplit=1)
@@ -203,15 +265,17 @@ async def on_words(msg: Message) -> None:
     user_id = _ensure_user(msg.chat.id)
     conn = db.connect()
     try:
+        chosen = db.get_langs(conn, user_id)
+        marks = ",".join("?" * len(chosen))
         rows = conn.execute(
-            """
-            SELECT w.lemma, uw.status, uw.due_at
+            f"""
+            SELECT w.lang, w.lemma, uw.status, uw.due_at
             FROM user_words uw JOIN words w ON w.id = uw.word_id
-            WHERE uw.user_id = ? AND w.lang = ?
+            WHERE uw.user_id = ? AND w.lang IN ({marks})
             ORDER BY uw.due_at IS NULL, uw.due_at ASC
             LIMIT 50
             """,
-            (user_id, LANG),
+            (user_id, *chosen),
         ).fetchall()
     finally:
         conn.close()
@@ -221,7 +285,7 @@ async def on_words(msg: Message) -> None:
     lines = []
     for r in rows:
         due = f" (due {r['due_at'][:10]})" if r["due_at"] else ""
-        lines.append(f"{r['lemma']} — {r['status']}{due}")
+        lines.append(f"{LANGS[r['lang']]['flag']} {r['lemma']} — {r['status']}{due}")
     await msg.answer("\n".join(lines))
 
 
@@ -272,9 +336,33 @@ async def on_stats(msg: Message) -> None:
 
 @router.message(Command("add"))
 async def on_add(msg: Message, state: FSMContext) -> None:
-    _ensure_user(msg.chat.id)
-    await state.set_state(Flow.add_latin)
-    await msg.answer("send the latin spelling:")
+    user_id = _ensure_user(msg.chat.id)
+    langs = _user_langs(user_id) or list(LANGS)
+    await state.clear()
+    if len(langs) > 1:
+        await msg.answer("which language?", reply_markup=bot_render.add_lang_keyboard(langs))
+        return
+    await _start_add(msg.answer, state, langs[0])
+
+
+@router.callback_query(F.data.startswith("addlang:"))
+async def on_add_lang_pick(cq: CallbackQuery, state: FSMContext) -> None:
+    _, code = cq.data.split(":", 1)
+    await cq.answer()
+    if code not in LANGS:
+        return
+    chat_id = cq.message.chat.id
+    await _start_add(lambda text: cq.bot.send_message(chat_id, text), state, code)
+
+
+async def _start_add(reply, state: FSMContext, lang: str) -> None:
+    await state.set_data({"add_lang": lang})
+    if lang == "ru":
+        await state.set_state(Flow.add_latin)
+        await reply("send the latin spelling:")
+    else:
+        await state.set_state(Flow.add_target)
+        await reply(f"send the {LANGS[lang]['name']} word:")
 
 
 @router.message(Flow.add_latin)
@@ -284,34 +372,51 @@ async def on_add_latin(msg: Message, state: FSMContext) -> None:
     await msg.answer("send the english gloss:")
 
 
+@router.message(Flow.add_target)
+async def on_add_target(msg: Message, state: FSMContext) -> None:
+    await state.update_data(target=(msg.text or "").strip())
+    await state.set_state(Flow.add_english)
+    await msg.answer("send the english gloss:")
+
+
 @router.message(Flow.add_english)
 async def on_add_english(msg: Message, state: FSMContext) -> None:
     await state.update_data(english=(msg.text or "").strip())
-    await state.set_state(Flow.add_cyrillic)
-    await msg.answer("send the cyrillic (or '-' to auto-transliterate):")
+    data = await state.get_data()
+    lang = data.get("add_lang", "ru")
+    if lang == "ru":
+        await state.set_state(Flow.add_cyrillic)
+        await msg.answer("send the cyrillic (or '-' to auto-transliterate):")
+        return
+    await _finish_add(msg, state, lang, data.get("target", ""), "", data["english"])
 
 
 @router.message(Flow.add_cyrillic)
 async def on_add_cyrillic(msg: Message, state: FSMContext) -> None:
     data = await state.get_data()
-    latin = data.get("latin", "")
-    english = data.get("english", "")
     raw = (msg.text or "").strip()
-    cyrillic = to_cyrillic(latin) if raw in ("", "-") else raw
+    target = "" if raw in ("", "-") else raw
+    latin = data.get("latin", "")
+    await _finish_add(msg, state, "ru", target, latin, data.get("english", ""))
+
+
+async def _finish_add(msg: Message, state: FSMContext, lang: str, target: str, romanized: str, english: str) -> None:
     await state.clear()
-    if not latin or not english or not cyrillic:
-        await msg.answer("latin and english are required. try /add again.")
+    target, romanized = text_study.normalize_known_word(lang, target, romanized)
+    english = english.strip()
+    if not target or not english:
+        await msg.answer("word and english are required. try /add again.")
         return
     conn = db.connect()
     try:
         cur = conn.execute(
             "INSERT OR IGNORE INTO known_words(lang, target, romanized, english) VALUES (?, ?, ?, ?)",
-            (LANG, cyrillic, latin, english),
+            (lang, target, romanized, english),
         )
         if cur.rowcount:
-            await msg.answer(f"added {cyrillic}")
+            await msg.answer(f"added {target}")
         else:
-            await msg.answer(f"already exists: {cyrillic}")
+            await msg.answer(f"already exists: {target}")
     finally:
         conn.close()
 
@@ -329,7 +434,7 @@ async def on_voice_answer(msg: Message, state: FSMContext) -> None:
     try:
         row = conn.execute(
             """
-            SELECT s.text, s.gloss_en, w.lemma FROM sentences s
+            SELECT s.text, s.gloss_en, w.lemma, w.lang FROM sentences s
             JOIN words w ON w.id = s.word_id
             WHERE s.id = ?
             """,
@@ -339,11 +444,11 @@ async def on_voice_answer(msg: Message, state: FSMContext) -> None:
             await state.clear()
             await _send_next(msg.bot, msg.chat.id, user_id, state)
             return
-        user_lemmas = study.user_word_lemmas(conn, user_id, LANG)
+        user_lemmas = study.user_word_lemmas(conn, user_id, row["lang"])
     finally:
         conn.close()
-    tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], LANG, user_lemmas)
-    text = bot_render.voice_reveal(tokens, row["gloss_en"])
+    tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], row["lang"], user_lemmas)
+    text = bot_render.voice_reveal(tokens, row["gloss_en"], row["lang"])
     await msg.answer(
         text,
         parse_mode=ParseMode.MARKDOWN_V2,
@@ -423,6 +528,11 @@ async def on_grade(cq: CallbackQuery, state: FSMContext) -> None:
         elif kind == "t":
             known_word_id = int(parts[3])
             direction = parts[4]
+            if direction not in text_study.DIRECTIONS:
+                # Buttons sent before the direction rename; drop the grade.
+                await cq.answer()
+                await _send_next(cq.bot, cq.message.chat.id, user_id, state)
+                return
             ukw = conn.execute(
                 "SELECT ef, interval_days FROM user_known_words WHERE user_id=? AND known_word_id=? AND direction=?",
                 (user_id, known_word_id, direction),
