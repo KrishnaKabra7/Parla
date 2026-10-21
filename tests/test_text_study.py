@@ -7,6 +7,7 @@ from app import db, text_study
 
 def _login(client: TestClient) -> None:
     client.post("/login", data={"name": "tester"})
+    client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
 
 
 def _seed(rows: list[tuple[str, str, str]], lang: str = "ru") -> None:
@@ -179,7 +180,7 @@ def test_set_mode_rejects_invalid(client: TestClient):
 def test_known_add_form_creates_row(client: TestClient):
     _login(client)
     r = client.post("/known/add", data={
-        "cyrillic": "яблоко", "latin": "yabloko", "english": "apple",
+        "target": "яблоко", "romanized": "yabloko", "english": "apple",
     })
     assert r.status_code == 200
     assert "added" in r.text
@@ -196,10 +197,10 @@ def test_known_add_form_creates_row(client: TestClient):
 def test_known_add_form_dedups(client: TestClient):
     _login(client)
     client.post("/known/add", data={
-        "cyrillic": "книга", "latin": "kniga", "english": "book",
+        "target": "книга", "romanized": "kniga", "english": "book",
     })
     r = client.post("/known/add", data={
-        "cyrillic": "книга", "latin": "kniga", "english": "different gloss",
+        "target": "книга", "romanized": "kniga", "english": "different gloss",
     })
     assert "already exists" in r.text
     conn = db.connect()

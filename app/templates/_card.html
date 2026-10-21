@@ -1,4 +1,5 @@
 <div id="card" class="card">
+{% if card_type %}<p class="lang-label muted">{{ lang_flag }} {{ lang_name }}</p>{% endif %}
 {% if card_type == "voice" %}
     <audio id="audio" src="/audio/{{ audio }}" autoplay></audio>
     <div class="replay-row">

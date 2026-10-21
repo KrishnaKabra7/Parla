@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 def _login(client: TestClient) -> None:
     client.post("/login", data={"name": "tester"})
+    client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
 
 
 def _seed_activity(client: TestClient) -> None:

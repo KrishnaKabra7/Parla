@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>stats</h1>
-<p class="muted">known words: <strong>{{ known }}</strong> · streak: <strong>{{ streak }}</strong> day{{ '' if streak == 1 else 's' }}</p>
+<p class="muted">known words: {% for pack, n in known %}{{ pack.flag }} {{ pack.name }} <strong>{{ n }}</strong>{% if not loop.last %}, {% endif %}{% endfor %} · streak: <strong>{{ streak }}</strong> day{{ '' if streak == 1 else 's' }}</p>
 
 <h2>reviews (last 30 days)</h2>
 {% set width = 600 %}

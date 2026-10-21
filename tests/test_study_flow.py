@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 def _login(client: TestClient) -> None:
     client.post("/login", data={"name": "tester"})
+    client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
 
 
 def test_study_shows_a_card(client: TestClient):
@@ -85,6 +86,7 @@ def test_words_seeded_from_freq_file(client: TestClient):
 
 def test_prefetch_generates_next_word_after_study(client: TestClient):
     client.post("/login", data={"name": "tester"}, follow_redirects=False)
+    client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
     client.get("/study")
     from app import db
     conn = db.connect()
@@ -187,6 +189,7 @@ def test_review_marks_known_lemmas_tappable(client: TestClient):
 
 def test_prefetch_makes_grade_a_cache_hit(client: TestClient):
     client.post("/login", data={"name": "tester"}, follow_redirects=False)
+    client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
     client.get("/study")
     # After GET /study: 2 Anthropic calls (current + prefetch of next)
     assert client.fake_client.messages.parse.call_count == 2  # type: ignore[attr-defined]

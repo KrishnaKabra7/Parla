@@ -1,5 +1,4 @@
 import os
-import random
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from functools import lru_cache
@@ -13,12 +12,10 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeSerializer
 
 from app import bot as tg, db, srs, study, text_study
-from app.langs import LANGS
-from app.translit import to_cyrillic, to_latin
+from app.langs import LANGS, candidates
 
 BASE_DIR = Path(__file__).parent
 AUDIO_DIR = Path("data/audio")
-LANG = "ru"
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-not-secure-change-me")
 COOKIE_NAME = "slux_session"
@@ -170,20 +167,61 @@ def logout():
     return resp
 
 
+def _user_langs(user_id: int) -> list[str]:
+    conn = db.connect()
+    try:
+        return db.get_langs(conn, user_id)
+    finally:
+        conn.close()
+
+
+def _lang_ctx(lang: str) -> dict:
+    return {"lang": lang, "lang_name": LANGS[lang]["name"], "lang_flag": LANGS[lang]["flag"]}
+
+
+@app.get("/langs")
+def langs_form(request: Request, user_id: int = Depends(require_user)):
+    return templates.TemplateResponse(
+        request, "langs.html", {"langs": LANGS, "chosen": _user_langs(user_id), "message": None}
+    )
+
+
+@app.post("/langs")
+def langs_submit(
+    request: Request,
+    langs: list[str] = Form(default=[]),
+    user_id: int = Depends(require_user),
+):
+    conn = db.connect()
+    try:
+        db.set_langs(conn, user_id, langs)
+    except ValueError:
+        return templates.TemplateResponse(
+            request,
+            "langs.html",
+            {"langs": LANGS, "chosen": db.get_langs(conn, user_id), "message": "pick at least one language"},
+            status_code=400,
+        )
+    finally:
+        conn.close()
+    return RedirectResponse("/study", status_code=303)
+
+
 def _mode(request: Request) -> str:
     m = request.cookies.get(MODE_COOKIE, DEFAULT_MODE)
     return m if m in MODES else DEFAULT_MODE
 
 
 async def _prefetch_next(user_id: int, client: Anthropic) -> None:
-    """Best-effort: pre-generate sentences for the next likely word.
-    Runs after the response is sent so it doesn't add to the user's wait."""
+    """Best-effort: pre-generate sentences for the next likely word in each
+    chosen language. Runs after the response is sent so it doesn't add to the
+    user's wait."""
     conn = db.connect()
     try:
-        item = study.pick_next(conn, user_id, LANG)
-        if item is None:
-            return
-        await study.ensure_sentences(conn, item.word_id, item.lemma, LANG, user_id, client)
+        for lang in db.get_langs(conn, user_id):
+            item = study.pick_next(conn, user_id, lang)
+            if item is not None:
+                await study.ensure_sentences(conn, item.word_id, item.lemma, lang, user_id, client)
     except Exception:
         pass
     finally:
@@ -194,6 +232,7 @@ def _text_card_ctx(card: text_study.TextCard) -> dict:
     prompt = card.english if card.direction == text_study.EN_TO_TL else card.target
     hint = LANGS[card.lang]["name"] if card.direction == text_study.EN_TO_TL else "English"
     return {
+        **_lang_ctx(card.lang),
         "card_type": "text",
         "known_word_id": card.known_word_id,
         "direction": card.direction,
@@ -202,41 +241,37 @@ def _text_card_ctx(card: text_study.TextCard) -> dict:
     }
 
 
-async def _prepare_voice_card(conn, user_id: int, client: Anthropic) -> dict | None:
-    item = study.pick_next(conn, user_id, LANG)
+async def _prepare_voice_card(conn, user_id: int, client: Anthropic, lang: str) -> dict | None:
+    item = study.pick_next(conn, user_id, lang)
     if item is None:
         return None
-    await study.ensure_sentences(conn, item.word_id, item.lemma, LANG, user_id, client)
+    await study.ensure_sentences(conn, item.word_id, item.lemma, lang, user_id, client)
     if item.is_new:
         study.ensure_user_word(conn, user_id, item.word_id)
     s = study.pick_sentence(conn, item.word_id)
     if s is None:
         return None
-    return {"card_type": "voice", "sentence_id": s["id"], "audio": s["audio_path"]}
+    return {**_lang_ctx(lang), "card_type": "voice", "sentence_id": s["id"], "audio": s["audio_path"]}
 
 
-def _prepare_text_card(conn, user_id: int) -> dict | None:
-    card = text_study.pick_card(conn, user_id, LANG)
+def _prepare_text_card(conn, user_id: int, lang: str) -> dict | None:
+    card = text_study.pick_card(conn, user_id, lang)
     if card is None:
         return None
     return _text_card_ctx(card)
 
 
 async def _prepare_card(conn, user_id: int, client: Anthropic, mode: str) -> dict:
-    empty = {"card_type": None, "mode": mode}
-    if mode == "voice":
-        ctx = await _prepare_voice_card(conn, user_id, client)
-        return {**(ctx or {}), **{"mode": mode, "card_type": ctx["card_type"] if ctx else None}}
-    if mode == "text":
-        ctx = _prepare_text_card(conn, user_id)
-        return {**(ctx or {}), **{"mode": mode, "card_type": ctx["card_type"] if ctx else None}}
-    # mixed: 50/50 coinflip; fall through to the other if empty.
-    first, second = ("voice", "text") if random.random() < 0.5 else ("text", "voice")
-    for kind in (first, second):
-        ctx = (await _prepare_voice_card(conn, user_id, client)) if kind == "voice" else _prepare_text_card(conn, user_id)
+    # Try every (kind, lang) pair in random order so an exhausted language or
+    # kind falls through to the next instead of showing "all caught up".
+    for kind, lang in candidates(mode, db.get_langs(conn, user_id)):
+        if kind == "voice":
+            ctx = await _prepare_voice_card(conn, user_id, client, lang)
+        else:
+            ctx = _prepare_text_card(conn, user_id, lang)
         if ctx is not None:
             return {**ctx, "mode": mode}
-    return empty
+    return {"card_type": None, "mode": mode}
 
 
 @app.get("/study")
@@ -247,6 +282,9 @@ async def study_page(
     client: Anthropic = Depends(get_anthropic),
 ):
     mode = _mode(request)
+    langs = _user_langs(user_id)
+    if not langs:
+        return RedirectResponse("/langs", status_code=303)
     conn = db.connect()
     try:
         ctx = await _prepare_card(conn, user_id, client, mode)
@@ -254,6 +292,7 @@ async def study_page(
         conn.close()
     if mode != "text":
         background_tasks.add_task(_prefetch_next, user_id, client)
+    ctx["chosen"] = [LANGS[code] for code in langs]
     return templates.TemplateResponse(request, "study.html", ctx)
 
 
@@ -280,7 +319,7 @@ def review(
     try:
         row = conn.execute(
             """
-            SELECT s.id, s.text, s.gloss_en, s.audio_path, w.lemma FROM sentences s
+            SELECT s.id, s.text, s.gloss_en, s.audio_path, w.lemma, w.lang FROM sentences s
             JOIN words w ON w.id = s.word_id
             WHERE s.id = ?
             """,
@@ -288,18 +327,20 @@ def review(
         ).fetchone()
         if row is None:
             raise HTTPException(404)
-        user_lemmas = study.user_word_lemmas(conn, user_id, LANG)
+        user_lemmas = study.user_word_lemmas(conn, user_id, row["lang"])
     finally:
         conn.close()
-    tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], LANG, user_lemmas)
+    lang = row["lang"]
+    tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], lang, user_lemmas)
     return templates.TemplateResponse(
         request,
         "_reveal.html",
         {
+            **_lang_ctx(lang),
             "sentence_id": sentence_id,
             "tokens": tokens,
             "gloss": row["gloss_en"],
-            "latin": to_latin(row["text"]),
+            "latin": LANGS[lang]["romanize"](row["text"]),
             "audio": row["audio_path"],
             "typed": typed,
         },
@@ -318,33 +359,37 @@ def words_page(
     like = f"%{q.strip().lower()}%"
     conn = db.connect()
     try:
+        chosen = db.get_langs(conn, user_id)
+        marks = ",".join("?" * len(chosen))
         if kind == "voice":
             rows = conn.execute(
-                """
-                SELECT w.id, w.lemma, w.gloss_en, uw.status, uw.ef, uw.due_at
+                f"""
+                SELECT w.id, w.lang, w.lemma, w.gloss_en, uw.status, uw.ef, uw.due_at
                 FROM user_words uw JOIN words w ON w.id = uw.word_id
-                WHERE uw.user_id = ? AND w.lang = ? AND LOWER(w.lemma) LIKE ?
+                WHERE uw.user_id = ? AND w.lang IN ({marks}) AND LOWER(w.lemma) LIKE ?
                 ORDER BY uw.due_at IS NULL, uw.due_at ASC
                 """,
-                (user_id, LANG, like),
+                (user_id, *chosen, like),
             ).fetchall()
         else:
             rows = conn.execute(
-                """
-                SELECT kw.target, kw.romanized, kw.english,
+                f"""
+                SELECT kw.lang, kw.target, kw.romanized, kw.english,
                        CASE ukw.direction WHEN 'en_to_tl' THEN 'en→' || kw.lang ELSE kw.lang || '→en' END AS direction,
                        ukw.status, ukw.ef, ukw.due_at
                 FROM user_known_words ukw JOIN known_words kw ON kw.id = ukw.known_word_id
-                WHERE ukw.user_id = ? AND kw.lang = ?
+                WHERE ukw.user_id = ? AND kw.lang IN ({marks})
                   AND (LOWER(kw.target) LIKE ? OR LOWER(kw.english) LIKE ?)
                 ORDER BY ukw.due_at IS NULL, ukw.due_at ASC
                 """,
-                (user_id, LANG, like, like),
+                (user_id, *chosen, like, like),
             ).fetchall()
     finally:
         conn.close()
     tpl = "_word_rows.html" if request.headers.get("HX-Request") else "words.html"
-    return templates.TemplateResponse(request, tpl, {"rows": rows, "q": q, "kind": kind})
+    return templates.TemplateResponse(
+        request, tpl, {"rows": rows, "q": q, "kind": kind, "langs": LANGS}
+    )
 
 
 @app.get("/words/{word_id}")
@@ -389,10 +434,14 @@ def stats_page(
             (user_id,),
         ).fetchall()
         per_day = {r["d"]: r["n"] for r in rows}
-        known = conn.execute(
-            "SELECT COUNT(*) AS n FROM user_words WHERE user_id = ? AND status = 'known'",
+        known_rows = conn.execute(
+            """
+            SELECT w.lang, COUNT(*) AS n FROM user_words uw JOIN words w ON w.id = uw.word_id
+            WHERE uw.user_id = ? AND uw.status = 'known' GROUP BY w.lang
+            """,
             (user_id,),
-        ).fetchone()["n"]
+        ).fetchall()
+        chosen = db.get_langs(conn, user_id)
         streak_rows = conn.execute(
             "SELECT DISTINCT DATE(created_at) AS d FROM reviews WHERE user_id = ? ORDER BY d DESC",
             (user_id,),
@@ -413,6 +462,8 @@ def stats_page(
         streak += 1
         d = d - timedelta(days=1)
 
+    known_by_lang = {r["lang"]: r["n"] for r in known_rows}
+    known = [(LANGS[code], known_by_lang.get(code, 0)) for code in chosen]
     return templates.TemplateResponse(
         request,
         "stats.html",
@@ -528,6 +579,7 @@ def review_text(
             "direction": direction,
             "typed": typed,
             "correct": correct,
+            **_lang_ctx(card.lang),
             "target": card.target,
             "romanized": card.romanized,
             "english": card.english,
@@ -587,33 +639,40 @@ async def grade_text(
     return templates.TemplateResponse(request, "_card.html", ctx)
 
 
+def _known_add_ctx(user_id: int, message: str | None) -> dict:
+    codes = _user_langs(user_id) or list(LANGS)
+    return {"message": message, "langs": [(code, LANGS[code]) for code in codes]}
+
+
 @app.get("/known/add")
 def known_add_form(request: Request, user_id: int = Depends(require_user)):
-    return templates.TemplateResponse(request, "known_add.html", {"message": None})
+    return templates.TemplateResponse(request, "known_add.html", _known_add_ctx(user_id, None))
 
 
 @app.post("/known/add")
 def known_add_submit(
     request: Request,
-    latin: str = Form(...),
     english: str = Form(...),
-    cyrillic: str = Form(""),
+    lang: str = Form("ru"),
+    target: str = Form(""),
+    romanized: str = Form(""),
     user_id: int = Depends(require_user),
 ):
-    latin = latin.strip()
+    if lang not in LANGS:
+        raise HTTPException(400, "invalid language")
     english = english.strip()
-    cyrillic = cyrillic.strip() or to_cyrillic(latin)
-    if not latin or not english or not cyrillic:
+    target, romanized = text_study.normalize_known_word(lang, target, romanized)
+    if not target or not english:
         return templates.TemplateResponse(
-            request, "known_add.html", {"message": "latin and english required"}
+            request, "known_add.html", _known_add_ctx(user_id, "word and english required")
         )
     conn = db.connect()
     try:
         cur = conn.execute(
             "INSERT OR IGNORE INTO known_words(lang, target, romanized, english) VALUES (?, ?, ?, ?)",
-            (LANG, cyrillic, latin, english),
+            (lang, target, romanized, english),
         )
-        msg = f"added {cyrillic}" if cur.rowcount else f"already exists: {cyrillic}"
+        msg = f"added {target}" if cur.rowcount else f"already exists: {target}"
     finally:
         conn.close()
-    return templates.TemplateResponse(request, "known_add.html", {"message": msg})
+    return templates.TemplateResponse(request, "known_add.html", _known_add_ctx(user_id, msg))

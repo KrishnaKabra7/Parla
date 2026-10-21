@@ -10,9 +10,9 @@
        hx-trigger="keyup changed delay:200ms" autofocus autocomplete="off">
 <table class="words">
     {% if kind == "voice" %}
-    <thead><tr><th>lemma</th><th>gloss</th><th>status</th><th>ef</th><th>due</th></tr></thead>
+    <thead><tr><th></th><th>lemma</th><th>gloss</th><th>status</th><th>ef</th><th>due</th></tr></thead>
     {% else %}
-    <thead><tr><th>cyrillic</th><th>english</th><th>dir</th><th>status</th><th>ef</th><th>due</th></tr></thead>
+    <thead><tr><th></th><th>word</th><th>english</th><th>dir</th><th>status</th><th>ef</th><th>due</th></tr></thead>
     {% endif %}
     <tbody id="rows">
         {% include "_word_rows.html" %}

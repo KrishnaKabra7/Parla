@@ -5,6 +5,7 @@
     <button type="submit" formaction="/mode/{{ m }}"{% if mode == m %} class="active"{% endif %}>{{ m }}</button>
     {% endfor %}
 </form>
+<p class="muted">practicing {% for p in chosen %}{{ p.flag }} {{ p.name }}{% if not loop.last %}, {% endif %}{% endfor %} · <a href="/langs">change</a></p>
 {% include "_card.html" %}
 <div id="spinner" class="htmx-indicator spinner">generating…</div>
 <p class="muted nav-links">

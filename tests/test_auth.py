@@ -21,6 +21,7 @@ def test_login_creates_user_and_redirects_to_study(client: TestClient):
 
 def test_study_accessible_after_login(client: TestClient):
     client.post("/login", data={"name": "alice"})
+    client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
     r = client.get("/study")
     assert r.status_code == 200
     assert 'id="card"' in r.text

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from sqlite3 import Connection
 
 from app.langs import LANGS
+from app.translit import to_cyrillic, to_latin
 
 EN_TO_TL = "en_to_tl"
 TL_TO_EN = "tl_to_en"
@@ -81,6 +82,16 @@ def load_card(conn: Connection, known_word_id: int, direction: str) -> TextCard 
         (known_word_id,),
     ).fetchone()
     return _card(row, direction) if row else None
+
+
+def normalize_known_word(lang: str, target: str, romanized: str) -> tuple[str, str]:
+    """Fill whichever script form is missing for Russian; Latin-script
+    languages store an empty romanized field."""
+    target, romanized = target.strip(), romanized.strip()
+    if lang != "ru":
+        return target, ""
+    target = target or to_cyrillic(romanized)
+    return target, romanized or (to_latin(target) if target else "")
 
 
 def ensure_user_known_word(conn: Connection, user_id: int, known_word_id: int, direction: str) -> None:

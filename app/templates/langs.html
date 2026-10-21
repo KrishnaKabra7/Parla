@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>what do you want to practice?</h1>
+{% if message %}<p class="muted">{{ message }}</p>{% endif %}
+<form method="post" action="/langs" class="lang-picker">
+    {% for code, pack in langs.items() %}
+    <label><input type="checkbox" name="langs" value="{{ code }}"{% if code in chosen %} checked{% endif %}> {{ pack.flag }} {{ pack.name }}</label>
+    {% endfor %}
+    <button type="submit">start</button>
+</form>
+{% endblock %}
