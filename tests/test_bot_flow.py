@@ -329,14 +329,14 @@ async def test_add_german_word_flow(bot_setup):
     b = _fake_bot()
     st = _state(508)
     await bot.on_add(_msg(508, "/add", b), st)
-    await bot.on_add_target(_msg(508, "Haus", b), st)
-    m = _msg(508, "house", b)
+    await bot.on_add_target(_msg(508, "Katze", b), st)
+    m = _msg(508, "cat", b)
     await bot.on_add_english(m, st)
-    assert "added Haus" in m.answer.call_args.args[0]
+    assert "added Katze" in m.answer.call_args.args[0]
     conn = db.connect()
-    row = conn.execute("SELECT romanized, english FROM known_words WHERE lang='de' AND target='Haus'").fetchone()
+    row = conn.execute("SELECT romanized, english FROM known_words WHERE lang='de' AND target='Katze'").fetchone()
     conn.close()
-    assert row["romanized"] == "" and row["english"] == "house"
+    assert row["romanized"] == "" and row["english"] == "cat"
     assert await st.get_state() is None
 
 

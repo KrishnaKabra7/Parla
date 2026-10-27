@@ -1,4 +1,503 @@
 # Seed list for German text-to-text drills. Format: target||english
 # The middle (romanized) field is empty for Latin-script languages.
+# Roughly the 500 most frequent words, in frequency order.
 ja||yes
 nein||no
+ich||I
+sie||she, they, you (formal)
+das||the (neut), that, this
+ist||is
+du||you (sg informal)
+nicht||not
+die||the (fem/pl)
+es||it
+und||and
+der||the (masc)
+wir||we
+was||what
+zu||to, too
+er||he
+ein||a (masc/neut)
+in||in
+mir||me (dat)
+mit||with
+wie||how, like
+den||the (masc acc)
+mich||me (acc)
+auf||on, onto
+dass||that (conj)
+aber||but
+eine||a (fem)
+so||so
+hat||has
+hier||here
+haben||to have
+für||for
+sind||are (we/they)
+war||was
+von||from, of
+wenn||if, when
+dich||you (sg acc)
+ihr||you (pl informal), her (dat)
+habe||I have
+an||at, on (a wall)
+bin||am
+noch||still, yet
+nur||only
+da||there
+dir||you (sg dat)
+sich||oneself (reflexive)
+einen||a (masc acc)
+uns||us
+hast||you have (du)
+dem||the (masc/neut dat)
+kann||can (I/he)
+gut||good, well
+auch||also, too
+schon||already
+als||as, than, when (past)
+sein||to be, his
+mal||once, times
+jetzt||now
+ihn||him
+dann||then
+aus||out, out of, from
+meine||my (fem/pl)
+um||around, at (time)
+im||in the (masc/neut)
+wird||will (he), becomes
+mein||my (masc/neut)
+bist||you are (du)
+doch||yes (contradicting), after all
+alles||everything
+weiß||know (I/he), white
+keine||no, none (fem/pl)
+oder||or
+nach||after, to (places)
+nichts||nothing
+man||one (pronoun), you (generic)
+muss||must (I/he)
+werden||to become
+will||want (I/he)
+ihnen||them (dat), you (formal dat)
+geht||goes
+wo||where
+etwas||something
+mehr||more
+bei||at (someone's), near
+also||so, therefore
+bitte||please
+immer||always
+warum||why
+vor||before, in front of, ago
+können||to be able to, can
+wieder||again
+sagen||to say
+machen||to make, to do
+danke||thanks, thank you
+sehr||very
+alle||all, everyone
+denn||because, then (particle)
+Mann||man, husband
+tun||to do (tun)
+ihm||him (dat)
+zum||to the (masc/neut)
+gehen||to go, to walk
+sehen||to see
+vielleicht||maybe, perhaps
+einem||a (masc/neut dat)
+wer||who
+ihre||her, their (fem/pl)
+diese||this, these (fem/pl)
+euch||you (pl acc/dat)
+einer||one, a (fem dat/gen)
+komm||come! (du)
+über||over, about, above
+gibt||gives, there is (es gibt)
+wissen||to know (facts)
+deine||your (fem/pl, du)
+müssen||to have to, must
+soll||should, is supposed to (I/he)
+werde||I will, I become
+nie||never
+wirklich||really
+kein||no, not a (masc/neut)
+viel||much, a lot
+weg||away, gone, way
+würde||would (I/he)
+tut||does
+am||at the, on the (masc/neut dat)
+des||of the (masc/neut gen)
+einfach||simple, simply, easy
+leben||to live, life
+hatte||had (I/he)
+Zeit||time
+weil||because
+willst||you want (du)
+kommen||to come
+dein||your (masc/neut, du)
+heute||today
+kommt||comes
+wollen||to want
+damit||so that, with it
+ganz||whole, quite, entirely
+wäre||would be (I/he)
+wollte||wanted (I/he)
+weißt||you know (du)
+sicher||sure, safe, certainly
+gesagt||said (participle)
+Frau||woman, wife, Mrs
+nun||now, well
+bis||until, till
+wurde||became, was (passive)
+leid||sorry (tut mir leid)
+kannst||you can (du)
+macht||makes, does
+dieser||this (masc)
+zurück||back
+lassen||to let, to leave
+hallo||hello, hi
+meinen||to mean, to think (opinion)
+Gott||God
+seine||his (fem/pl)
+hätte||would have (I/he)
+zwei||two
+könnte||could (I/he)
+genau||exactly
+waren||were
+zur||to the (fem)
+lass||let! (du)
+klar||clear, sure, of course
+morgen||tomorrow, morning
+Leute||people
+Vater||father
+schön||beautiful, nice
+glaube||I believe, I think
+ab||off, from (time)
+gerade||just, right now, straight
+Tag||day
+gesehen||seen
+reden||to talk
+wohl||well, probably (supposedly)
+Liebe||love
+sollte||should (I/he)
+sagte||said (I/he)
+unsere||our (fem/pl)
+jemand||someone, somebody
+Geld||money
+durch||through
+ob||whether
+keinen||no, not a (masc acc)
+Mutter||mother
+raus||out
+gemacht||made, done (machen)
+paar||couple, a few (ein paar)
+mach||do!, make! (du)
+passiert||happened, happens
+dachte||thought (I/he)
+besser||better
+musst||you must (du)
+wieso||why, how come
+dieses||this (neut)
+selbst||self, even (selbst)
+gehört||heard, belongs
+möchte||would like (I/he)
+ohne||without
+hör||listen! (du)
+her||here (towards speaker)
+sag||say! (du)
+meiner||my (fem dat/gen), mine
+anderen||others, other (pl)
+helfen||to help
+Nacht||night
+finden||to find
+diesen||this (masc acc)
+gute||good (fem/pl)
+wirst||you will (du)
+lange||for a long time
+natürlich||naturally, of course
+ach||oh
+meinem||my (masc/neut dat)
+gar||at all (gar nicht)
+ins||into the (neut)
+sei||be! (du)
+dort||there (dort)
+weiter||further, on
+geben||to give
+seit||since, for (time)
+gleich||same, right away
+sagt||says
+recht||right (recht haben)
+ihren||her, their (masc acc)
+richtig||right, correct
+Ordnung||order (in Ordnung = okay)
+vom||from the (masc/neut)
+hören||to hear
+sieht||sees, looks
+davon||of it, from it
+dafür||for it
+geh||go! (du)
+diesem||this (masc/neut dat)
+wegen||because of
+Hause||home (zu Hause)
+sollten||should (we/they)
+Mädchen||girl
+hin||there (away from speaker)
+sollen||to be supposed to
+Abend||evening
+Haus||house
+denke||I think
+viele||many
+drei||three
+deinen||your (masc acc, du)
+Freund||friend (male), boyfriend
+unser||our (masc/neut)
+warte||wait! (du)
+machst||you make, you do (du)
+Menschen||people, humans
+essen||to eat
+Angst||fear
+bleiben||to stay, to remain
+zusammen||together
+Welt||world
+unter||under, below, among
+habt||you have (ihr)
+schnell||fast, quickly
+andere||other (fem/pl)
+tot||dead
+getan||done (tun)
+darf||may, am allowed (I/he)
+erst||only, first, not until
+rein||in, pure
+stimmt||is right, true (das stimmt)
+nehmen||to take
+Kinder||children
+glauben||to believe
+bringen||to bring
+ganze||whole, entire
+genug||enough
+brauchen||to need
+gegen||against
+Moment||moment
+Junge||boy
+steht||stands
+sonst||otherwise, else
+Musik||music
+Arbeit||work
+seid||you are (ihr)
+fragen||to ask (a question)
+Herr||Mr, sir, lord
+dabei||with it, present (there)
+heißt||is called, means
+Familie||family
+warten||to wait
+niemand||nobody, no one
+sofort||immediately, at once
+bevor||before (conj)
+Jahre||years
+einmal||once
+Problem||problem
+Sohn||son
+wann||when (question)
+brauche||I need
+fertig||ready, finished, done
+halt||stop!, just (particle)
+allein||alone
+beim||at the, while (beim Essen)
+sprechen||to speak
+beide||both
+gefunden||found (participle)
+hatten||had (we/they)
+Sache||thing, matter
+Hilfe||help
+verdammt||damn, damned
+jeder||every, everyone (masc)
+warst||you were (du)
+gern||gladly
+konnte||could, was able (I/he)
+darüber||about it, over it
+halten||to hold, to stop
+siehst||you see (du)
+verstehe||I understand
+kam||came (I/he)
+Kind||child
+wusste||knew (I/he)
+wahr||true
+seinen||his (masc acc)
+dazu||to it, in addition
+Bruder||brother
+daran||on it, about it (daran denken)
+denken||to think
+könnten||could (we/they)
+Dank||gratitude (vielen Dank)
+würden||would (we/they)
+lieber||rather, dear (masc)
+Fall||case, fall
+egal||doesn't matter, whatever
+kennen||to know (be familiar with)
+vergessen||to forget, forgotten
+Frage||question
+mache||I make, I do
+komme||I come
+sage||I say
+mag||like (I/he)
+sieh||see! (du)
+echt||real, really (colloquial)
+gib||give! (du)
+eigentlich||actually
+gab||gave, there was (es gab)
+Uhr||clock, o'clock, watch
+Stadt||city, town
+Männer||men
+fahren||to drive, to ride
+Namen||names
+bekommen||to get, to receive
+Kopf||head
+gehe||I go
+kleine||little, small (fem/pl)
+später||later
+Glück||luck, happiness
+letzte||last
+Freunde||friends
+darauf||on it, for it (waiting)
+Ende||end
+bald||soon
+töten||to kill
+Dinge||things
+meinst||you mean (du)
+toll||great, awesome
+eins||one (number)
+Minuten||minutes
+bereit||ready (bereit)
+weit||far, wide
+Ahnung||idea, clue (keine Ahnung)
+bisschen||a bit, a little
+Tür||door
+Auto||car
+Jungs||guys, boys
+Augen||eyes
+Polizei||police
+stehen||to stand
+sterben||to die
+draußen||outside
+kenne||I know (someone)
+fast||almost
+runter||down
+vorbei||over, past
+treffen||to meet
+gerne||with pleasure
+arbeiten||to work
+verrückt||crazy
+neue||new (fem/pl)
+ging||went (I/he)
+hinter||behind (prep)
+Sorgen||worries
+einzige||only, single
+jemanden||someone (acc)
+darum||that's why, around it
+Tochter||daughter
+braucht||needs
+Idee||idea
+Schwester||sister
+drin||inside, in it
+ruhig||calm
+sah||saw (I/he)
+spät||late
+ziemlich||quite, fairly, pretty (fairly)
+solltest||you should (du)
+Name||name
+sogar||even (sogar)
+kurz||short, briefly
+Kerl||guy, fellow
+Frauen||women
+liegt||lies (is lying)
+suchen||to look for, to search
+finde||I find
+woher||where from
+lang||long
+keiner||nobody, none (masc)
+hört||hears
+verstehen||to understand
+spielen||to play
+überhaupt||at all (überhaupt)
+Teufel||devil
+verstanden||understood
+verloren||lost
+große||big, large (fem/pl)
+Hand||hand
+Grund||reason
+Jahr||year
+kommst||you come (du)
+Mama||mom
+Ruhe||peace, rest, silence
+gewesen||been
+Tod||death
+Stunden||hours
+hoffe||I hope
+denkst||you think (du)
+oben||up, above, upstairs
+gestern||yesterday
+versuchen||to try
+Art||kind, type, way
+Schatz||treasure, sweetheart
+endlich||finally
+nimm||take! (du)
+etwa||about, approximately
+erzählt||told, tells
+läuft||runs
+schwer||heavy, difficult
+anders||different, differently
+musste||had to (I/he)
+fünf||five
+Wasser||water
+lässt||lets, leaves
+erste||first
+versucht||tried
+gekommen||come (participle)
+Geschichte||story, history
+wenig||little, few
+holen||to fetch, to get (fetch)
+bedeutet||means
+nett||nice, kind
+Wahrheit||truth
+Woche||week
+bringt||brings
+deshalb||therefore
+welche||which
+bestimmt||certainly, definitely
+hoch||high, up
+Alter||age
+sagst||you say (du)
+schau||look! (du)
+Land||country, land
+Zimmer||room
+Wagen||wagon, cart
+vier||four
+gefallen||to please, fallen
+Spaß||fun
+niemals||never ever
+Schuld||guilt, fault
+getötet||killed
+wollten||wanted (we/they)
+verlassen||to leave, to abandon
+zeigen||to show
+beste||best
+ernst||serious
+Ort||place (location)
+bleibt||stays
+würdest||you would (du)
+manchmal||sometimes
+glaubst||you believe (du)
+Seite||side, page
+zwischen||between
+eben||just (eben), flat
+während||during, while
+Spiel||game
+nehme||I take
+guter||good (masc)
+Chance||chance
+Freundin||friend (female), girlfriend
+Krieg||war
+gefällt||pleases (es gefällt mir)
+erzählen||to tell
+anderes||something else, other (neut)

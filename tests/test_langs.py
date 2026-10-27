@@ -47,7 +47,8 @@ def test_startup_seeds_both_languages(client):
     conn.close()
     assert words["ru"] == 3000
     assert words["de"] == 3000
-    assert de_known == {"ja", "nein"}
+    assert len(de_known) == 500
+    assert {"ja", "nein", "ich", "Haus"} <= de_known
 
 
 def test_german_fold_accepts_bare_vowels():
@@ -55,3 +56,27 @@ def test_german_fold_accepts_bare_vowels():
     assert fold("über") == fold("uber") == fold("ueber")
     assert fold("schön") == fold("schon")
     assert fold("Mädchen") == fold("madchen")
+
+
+def test_spanish_fold_ignores_accents_tilde_and_case():
+    fold = LANGS["es"]["fold"]
+    assert fold("Canción") == fold("cancion")
+    assert fold("Niño") == fold("nino")
+    assert fold("pingüino") == fold("pinguino")
+    assert fold("ÁRBOL") == fold("arbol")
+
+
+def test_no_romanize_for_spanish():
+    assert LANGS["es"]["romanize"]("hola") is None
+
+
+def test_startup_seeds_spanish(client):
+    from app import db
+
+    conn = db.connect()
+    n = conn.execute("SELECT COUNT(*) FROM words WHERE lang = 'es'").fetchone()[0]
+    known = {r["target"] for r in conn.execute("SELECT target FROM known_words WHERE lang = 'es'")}
+    conn.close()
+    assert n == 3000
+    assert len(known) == 500
+    assert {"sí", "no", "yo", "casa"} <= known

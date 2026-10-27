@@ -65,7 +65,6 @@ def test_pick_card_filters_by_language(client: TestClient):
     for _ in range(20):
         card = text_study.pick_card(conn, uid, "de")
         assert card.lang == "de"
-        assert card.target in ("ja", "nein")
     ru = text_study.pick_card(conn, uid, "ru")
     assert ru.lang == "ru"
     conn.close()
@@ -218,3 +217,8 @@ def test_text_card_falls_back_to_other_direction_when_empty(client: TestClient):
     client.cookies.set("slux_mode", "text")
     r = client.get("/study")
     assert 'name="known_word_id"' in r.text
+
+
+def test_check_answer_es_ignores_accents_and_inverted_marks():
+    card = _card("¿qué?", "", "what", text_study.EN_TO_TL, lang="es")
+    assert text_study.check_answer(card, "que")

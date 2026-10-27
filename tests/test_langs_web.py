@@ -78,7 +78,6 @@ def test_german_only_text_card_asks_for_german(client: TestClient):
         assert 'name="known_word_id"' in r.text
         assert "answer in German" in r.text or "answer in English" in r.text
         assert "German" in r.text
-        assert any(w in r.text for w in ("yes", "no", "ja", "nein"))
 
 
 def test_german_reveal_has_no_translit_line(client: TestClient):
@@ -133,12 +132,12 @@ def test_grade_text_serves_next_card_from_chosen_language(client: TestClient):
 
 def test_known_add_german_word(client: TestClient):
     _login(client, ["de"])
-    r = client.post("/known/add", data={"lang": "de", "target": "Haus", "romanized": "", "english": "house"})
-    assert "added Haus" in r.text
+    r = client.post("/known/add", data={"lang": "de", "target": "Katze", "romanized": "", "english": "cat"})
+    assert "added Katze" in r.text
     conn = db.connect()
-    row = conn.execute("SELECT romanized, english FROM known_words WHERE lang='de' AND target='Haus'").fetchone()
+    row = conn.execute("SELECT romanized, english FROM known_words WHERE lang='de' AND target='Katze'").fetchone()
     conn.close()
-    assert row["romanized"] == "" and row["english"] == "house"
+    assert row["romanized"] == "" and row["english"] == "cat"
 
 
 def test_known_add_german_requires_target(client: TestClient):
@@ -186,3 +185,18 @@ def test_known_add_russian_latin_in_word_field_is_transliterated(client: TestCli
     row = conn.execute("SELECT target, romanized FROM known_words WHERE english='cat'").fetchone()
     conn.close()
     assert (row["target"], row["romanized"]) == ("кошка", "koshka")
+
+
+def test_picker_offers_spanish(client: TestClient):
+    _login(client, None)
+    r = client.get("/langs")
+    assert 'value="es"' in r.text and "Spanish" in r.text
+
+
+def test_spanish_only_voice_card_is_spanish(client: TestClient):
+    _login(client, ["es"])
+    client.cookies.set("slux_mode", "voice")
+    r = client.get("/study")
+    assert 'name="sentence_id"' in r.text
+    assert "Spanish" in r.text
+    assert _latest_sentence_lang() == "es"
