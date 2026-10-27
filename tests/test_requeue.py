@@ -267,3 +267,70 @@ def test_migration_adds_requeue_column_to_user_words(tmp_path):
     cols = {r["name"] for r in c.execute("PRAGMA table_info(user_words)")}
     c.close()
     assert "requeue_after" in cols
+
+
+def test_grades_below_hard_requeue_like_again(conn):
+    uid = _user(conn)
+    for g in (1, 2):
+        wid = _new_word(conn, g)
+        _grade_voice(conn, uid, wid, g)
+        row = conn.execute("SELECT interval_days, requeue_after FROM user_words WHERE word_id = ?", (wid,)).fetchone()
+        assert row["interval_days"] == 0 and row["requeue_after"] is not None
+
+
+def test_failed_schedule_write_rolls_back_the_review(conn):
+    uid = _user(conn)
+    wid = _new_word(conn)
+    conn.execute("CREATE TEMP TRIGGER boom BEFORE INSERT ON user_words BEGIN SELECT RAISE(ABORT, 'boom'); END")
+    with pytest.raises(Exception):
+        _grade_voice(conn, uid, wid, 4)
+    conn.execute("DROP TRIGGER boom")
+    assert srs.review_count(conn, uid) == 0
+
+
+def _voice_login(client, name):
+    client.post("/login", data={"name": name})
+    client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
+    client.cookies.set("slux_mode", "voice")
+
+
+def _graded_words(conn, n):
+    return [r["id"] for r in conn.execute("SELECT id FROM words WHERE lang='ru' ORDER BY freq_rank LIMIT ? OFFSET 50", (n,))]
+
+
+def test_flagged_words_do_not_shorten_the_again_window(client: TestClient):
+    _voice_login(client, "flaggy")
+    client.get("/study")
+    conn = db.connect()
+    uid = conn.execute("SELECT id FROM users WHERE name='flaggy'").fetchone()["id"]
+    flags = _graded_words(conn, 4)
+    for w in flags:
+        _grade_voice(conn, uid, w, 4)
+    s = conn.execute("SELECT id, word_id FROM sentences ORDER BY id DESC LIMIT 1").fetchone()
+    client.post("/grade", data={"sentence_id": s["id"], "grade": 0, "flagged_word_ids": flags})
+    after = conn.execute("SELECT requeue_after FROM user_words WHERE word_id = ?", (s["word_id"],)).fetchone()[0]
+    gap = after - srs.review_count(conn, uid)
+    conn.close()
+    assert gap >= srs.REQUEUE_MIN
+
+
+def test_duplicate_flagged_ids_are_graded_once(client: TestClient):
+    _voice_login(client, "dupe")
+    client.get("/study")
+    conn = db.connect()
+    uid = conn.execute("SELECT id FROM users WHERE name='dupe'").fetchone()["id"]
+    (w,) = _graded_words(conn, 1)
+    _grade_voice(conn, uid, w, 4)
+    s = conn.execute("SELECT id, word_id FROM sentences ORDER BY id DESC LIMIT 1").fetchone()
+    client.post("/grade", data={"sentence_id": s["id"], "grade": 4, "flagged_word_ids": [w, w, s["word_id"]]})
+    agains = conn.execute("SELECT COUNT(*) FROM reviews WHERE user_id = ? AND grade = 0", (uid,)).fetchone()[0]
+    conn.close()
+    assert agains == 1
+
+
+def test_shown_but_ungraded_voice_word_is_served_again(conn):
+    uid = _user(conn)
+    first = study.pick_next(conn, uid, "de")
+    study.ensure_user_word(conn, uid, first.word_id)
+    again = study.pick_next(conn, uid, "de")
+    assert again.word_id == first.word_id and again.is_new

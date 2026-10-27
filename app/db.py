@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 
 from app.langs import LANGS
@@ -122,16 +123,22 @@ def _add_requeue_column(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN requeue_after INTEGER")
 
 
-def _in_transaction(conn: sqlite3.Connection, step) -> None:
-    # Each migration step commits as a unit so a crash mid-step can't leave
-    # a half-renamed table that the "already migrated?" check then skips.
+@contextmanager
+def transaction(conn: sqlite3.Connection):
     conn.execute("BEGIN")
     try:
-        step(conn)
+        yield
     except BaseException:
         conn.execute("ROLLBACK")
         raise
     conn.execute("COMMIT")
+
+
+def _in_transaction(conn: sqlite3.Connection, step) -> None:
+    # Each migration step commits as a unit so a crash mid-step can't leave
+    # a half-renamed table that the "already migrated?" check then skips.
+    with transaction(conn):
+        step(conn)
 
 
 def _create_user_langs(conn: sqlite3.Connection) -> None:

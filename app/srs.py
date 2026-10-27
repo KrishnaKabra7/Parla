@@ -2,6 +2,8 @@ import random
 from datetime import datetime, timedelta, timezone
 from enum import IntEnum
 
+from app import db
+
 
 class Grade(IntEnum):
     AGAIN = 0
@@ -64,28 +66,29 @@ def record_grade(conn, user_id: int, grade: int, table: str, key: dict, sentence
     graded cards, so it returns in the same sitting."""
     cols = ", ".join(key)
     where = " AND ".join(f"{k} = ?" for k in key)
-    row = conn.execute(
-        f"SELECT ef, interval_days FROM {table} WHERE user_id = ? AND {where}", (user_id, *key.values())
-    ).fetchone()
-    ef, interval = (row["ef"], row["interval_days"]) if row else (DEFAULT_EF, 0.0)
-    ef, interval, due_at, status = review(ef, interval, grade)
-    conn.execute(
-        "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, ?, ?, ?)",
-        (user_id, sentence_id, grade, typed),
-    )
-    requeue_after = None
-    if grade == Grade.AGAIN:
-        requeue_after = review_count(conn, user_id) + (rng or random).randint(REQUEUE_MIN, REQUEUE_MAX)
-    conn.execute(
-        f"""
-        INSERT INTO {table}(user_id, {cols}, status, ef, interval_days, due_at, requeue_after)
-        VALUES (?, {", ".join("?" * len(key))}, ?, ?, ?, ?, ?)
-        ON CONFLICT(user_id, {cols}) DO UPDATE SET
-            status = excluded.status,
-            ef = excluded.ef,
-            interval_days = excluded.interval_days,
-            due_at = excluded.due_at,
-            requeue_after = excluded.requeue_after
-        """,
-        (user_id, *key.values(), status, ef, interval, due_at.isoformat(), requeue_after),
-    )
+    with db.transaction(conn):
+        row = conn.execute(
+            f"SELECT ef, interval_days FROM {table} WHERE user_id = ? AND {where}", (user_id, *key.values())
+        ).fetchone()
+        ef, interval = (row["ef"], row["interval_days"]) if row else (DEFAULT_EF, 0.0)
+        ef, interval, due_at, status = review(ef, interval, grade)
+        conn.execute(
+            "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, ?, ?, ?)",
+            (user_id, sentence_id, grade, typed),
+        )
+        requeue_after = None
+        if grade < Grade.HARD:
+            requeue_after = review_count(conn, user_id) + (rng or random).randint(REQUEUE_MIN, REQUEUE_MAX)
+        conn.execute(
+            f"""
+            INSERT INTO {table}(user_id, {cols}, status, ef, interval_days, due_at, requeue_after)
+            VALUES (?, {", ".join("?" * len(key))}, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, {cols}) DO UPDATE SET
+                status = excluded.status,
+                ef = excluded.ef,
+                interval_days = excluded.interval_days,
+                due_at = excluded.due_at,
+                requeue_after = excluded.requeue_after
+            """,
+            (user_id, *key.values(), status, ef, interval, due_at.isoformat(), requeue_after),
+        )

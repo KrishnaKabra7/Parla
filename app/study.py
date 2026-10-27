@@ -32,7 +32,9 @@ def _pick_due(conn: Connection, user_id: int, lang: str, requeue_limit: int) -> 
     ).fetchone()
 
 
-def pick_next(conn: Connection, user_id: int, lang: str) -> NextItem | None:
+def pick_next(conn: Connection, user_id: int, lang: str, skip_shown: bool = False) -> NextItem | None:
+    # A word that was shown but never graded counts as new again, unless
+    # skip_shown (prefetch wants the word after the one on screen).
     row = _pick_due(conn, user_id, lang, srs.review_count(conn, user_id))
     if row:
         return NextItem(word_id=row["id"], lemma=row["lemma"], is_new=False)
@@ -40,10 +42,10 @@ def pick_next(conn: Connection, user_id: int, lang: str) -> NextItem | None:
         """
         SELECT w.id AS id, w.lemma AS lemma FROM words w
         WHERE w.lang = ?
-          AND w.id NOT IN (SELECT word_id FROM user_words WHERE user_id = ?)
+          AND w.id NOT IN (SELECT word_id FROM user_words WHERE user_id = ? AND (due_at IS NOT NULL OR ?))
         ORDER BY w.freq_rank ASC LIMIT 1
         """,
-        (lang, user_id),
+        (lang, user_id, skip_shown),
     ).fetchone()
     if row:
         return NextItem(word_id=row["id"], lemma=row["lemma"], is_new=True)

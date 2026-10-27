@@ -219,7 +219,7 @@ async def _prefetch_next(user_id: int, client: Anthropic) -> None:
     conn = db.connect()
     try:
         for lang in db.get_langs(conn, user_id):
-            item = study.pick_next(conn, user_id, lang)
+            item = study.pick_next(conn, user_id, lang, skip_shown=True)
             if item is not None:
                 await study.ensure_sentences(conn, item.word_id, item.lemma, lang, user_id, client)
     except Exception:
@@ -491,11 +491,12 @@ async def grade(
         if row is None:
             raise HTTPException(404)
         word_id = row["word_id"]
-        srs.record_grade(conn, user_id, grade, "user_words", {"word_id": word_id}, sentence_id, typed)
-        for fid in flagged_word_ids:
+        # Flags first, so their reviews don't eat into the main word's Again window.
+        for fid in set(flagged_word_ids) - {word_id}:
             seen = conn.execute("SELECT 1 FROM user_words WHERE user_id=? AND word_id=?", (user_id, fid)).fetchone()
-            if fid != word_id and seen:
+            if seen:
                 srs.record_grade(conn, user_id, srs.Grade.AGAIN, "user_words", {"word_id": fid}, sentence_id, typed)
+        srs.record_grade(conn, user_id, grade, "user_words", {"word_id": word_id}, sentence_id, typed)
         ctx = await _prepare_card(conn, user_id, client, mode)
     finally:
         conn.close()
