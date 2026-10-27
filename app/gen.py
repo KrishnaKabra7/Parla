@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from app.langs import LANGS
 
-MODEL = "claude-haiku-4-5"
+MODEL = "claude-haiku-5-5"
 MAX_TOKENS = 1024
 
 log = logging.getLogger("app.gen")

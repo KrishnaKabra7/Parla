@@ -60,7 +60,7 @@ def test_prompt_handles_empty_known_list():
 def test_uses_haiku_model():
     client = _mock_client(_valid_parsed())
     generate("ru", "привет", [], client=client)
-    assert client.messages.parse.call_args.kwargs["model"] == "claude-haiku-4-5"
+    assert client.messages.parse.call_args.kwargs["model"] == "claude-haiku-5-5"
 
 
 def test_uses_structured_output_format():
@@ -94,3 +94,11 @@ def test_german_uses_german_prompt():
     system = client.messages.parse.call_args.kwargs["system"]
     assert "German" in system[0]["text"]
     assert "ja" in system[1]["text"]
+
+
+def test_spanish_uses_spanish_prompt():
+    client = _mock_client(_valid_parsed("house"))
+    generate("es", "casa", ["sí"], client=client)
+    system = client.messages.parse.call_args.kwargs["system"]
+    assert "Spanish" in system[0]["text"]
+    assert "sí" in system[1]["text"]
