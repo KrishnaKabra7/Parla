@@ -25,7 +25,7 @@ def pick_next(conn: Connection, user_id: int, lang: str) -> NextItem | None:
         SELECT w.id AS id, w.lemma AS lemma FROM user_words uw
         JOIN words w ON w.id = uw.word_id
         WHERE uw.user_id = ? AND w.lang = ?
-          AND uw.due_at IS NOT NULL AND uw.due_at <= datetime('now')
+          AND uw.due_at IS NOT NULL AND datetime(uw.due_at) <= datetime('now')
         ORDER BY uw.due_at ASC LIMIT 1
         """,
         (user_id, lang),
