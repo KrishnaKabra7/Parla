@@ -4,7 +4,7 @@ from sqlite3 import Connection, Row
 
 from anthropic import Anthropic
 
-from app import gen, tts
+from app import gen, srs, tts
 from app.langs import LANGS
 
 # Per-word locks so a background prefetch and a foreground gen for the same
@@ -19,17 +19,21 @@ class NextItem:
     is_new: bool
 
 
-def pick_next(conn: Connection, user_id: int, lang: str) -> NextItem | None:
-    row = conn.execute(
+def _pick_due(conn: Connection, user_id: int, lang: str, requeue_limit: int) -> Row | None:
+    return conn.execute(
         """
         SELECT w.id AS id, w.lemma AS lemma FROM user_words uw
         JOIN words w ON w.id = uw.word_id
         WHERE uw.user_id = ? AND w.lang = ?
-          AND uw.due_at IS NOT NULL AND datetime(uw.due_at) <= datetime('now')
-        ORDER BY uw.due_at ASC LIMIT 1
+          AND (uw.requeue_after <= ? OR (uw.requeue_after IS NULL AND datetime(uw.due_at) <= datetime('now')))
+        ORDER BY uw.requeue_after IS NULL, uw.requeue_after, uw.due_at LIMIT 1
         """,
-        (user_id, lang),
+        (user_id, lang, requeue_limit),
     ).fetchone()
+
+
+def pick_next(conn: Connection, user_id: int, lang: str) -> NextItem | None:
+    row = _pick_due(conn, user_id, lang, srs.review_count(conn, user_id))
     if row:
         return NextItem(word_id=row["id"], lemma=row["lemma"], is_new=False)
     row = conn.execute(
@@ -43,6 +47,9 @@ def pick_next(conn: Connection, user_id: int, lang: str) -> NextItem | None:
     ).fetchone()
     if row:
         return NextItem(word_id=row["id"], lemma=row["lemma"], is_new=True)
+    row = _pick_due(conn, user_id, lang, 2**62)
+    if row:
+        return NextItem(word_id=row["id"], lemma=row["lemma"], is_new=False)
     return None
 
 

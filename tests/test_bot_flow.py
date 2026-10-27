@@ -408,3 +408,21 @@ async def test_telegram_again_requeues_text_card(bot_setup):
     assert row["interval_days"] == 0
     assert row["requeue_after"] is not None
     assert reviews == 1
+
+
+async def test_telegram_voice_again_requeues(bot_setup):
+    bot = bot_setup["bot_mod"]
+    db = bot_setup["db"]
+    uid = bot._ensure_user(510)
+    _set_langs(bot_setup, uid, ["ru"])
+    conn = db.connect()
+    wid = conn.execute("SELECT id FROM words WHERE lang='ru' ORDER BY freq_rank LIMIT 1").fetchone()["id"]
+    sid = conn.execute(
+        "INSERT INTO sentences(word_id, text, gloss_en, audio_path) VALUES (?, 'x', 'x', 'x.mp3') RETURNING id", (wid,)
+    ).fetchone()["id"]
+    conn.close()
+    await bot.on_grade(_cq(510, f"g:0:v:{sid}", _fake_bot()), _state(510))
+    conn = db.connect()
+    row = conn.execute("SELECT interval_days, requeue_after FROM user_words WHERE user_id = ?", (uid,)).fetchone()
+    conn.close()
+    assert row["interval_days"] == 0 and row["requeue_after"] is not None

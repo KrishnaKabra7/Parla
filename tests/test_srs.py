@@ -27,15 +27,18 @@ def test_update_ef_good_raises_ef():
     assert update_ef(DEFAULT_EF, Grade.GOOD) > DEFAULT_EF
 
 
-def test_update_ef_hard_raises_ef_but_less_than_good():
+def test_update_ef_hard_lowers_ef_less_than_again():
     ef_hard = update_ef(DEFAULT_EF, Grade.HARD)
-    ef_good = update_ef(DEFAULT_EF, Grade.GOOD)
-    assert ef_hard > DEFAULT_EF
-    assert ef_hard < ef_good
+    assert ef_hard < DEFAULT_EF
+    assert ef_hard > update_ef(DEFAULT_EF, Grade.AGAIN)
 
 
-def test_update_ef_only_again_lowers():
+def test_update_ef_again_lowers():
     assert update_ef(DEFAULT_EF, Grade.AGAIN) < DEFAULT_EF
+
+
+def test_update_ef_hard_floor():
+    assert update_ef(MIN_EF, Grade.HARD) == MIN_EF
 
 
 def test_update_ef_floor():
@@ -63,8 +66,8 @@ def test_next_interval_subsequent_review_multiplies_by_ef():
     assert next_interval(3.0, DEFAULT_EF, Grade.GOOD) == 3.0 * DEFAULT_EF
 
 
-def test_next_interval_fail_resets_to_one_day():
-    assert next_interval(30.0, DEFAULT_EF, Grade.AGAIN) == 1.0
+def test_next_interval_fail_resets_to_zero_for_relearning():
+    assert next_interval(30.0, DEFAULT_EF, Grade.AGAIN) == 0.0
 
 
 def test_next_interval_hard_still_progresses():
@@ -90,11 +93,11 @@ def test_review_returns_all_fields():
     assert status == "learning"
 
 
-def test_review_fail_schedules_tomorrow():
+def test_review_fail_resets_to_now():
     now = datetime(2026, 1, 1, tzinfo=timezone.utc)
     _, interval_new, due_at, status = review(DEFAULT_EF, 30.0, Grade.AGAIN, now=now)
-    assert interval_new == 1.0
-    assert due_at == now + timedelta(days=1)
+    assert interval_new == 0.0
+    assert due_at == now
     assert status == "learning"
 
 

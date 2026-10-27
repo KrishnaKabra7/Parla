@@ -136,8 +136,8 @@ def test_grade_applies_again_to_flagged_words(client: TestClient):
         (sid,),
     ).fetchall()
     conn.close()
-    # Flagged word was pulled back to 1-day interval with lower ef.
-    assert flagged_uw["interval_days"] == 1.0
+    # Flagged word was reset to relearn with lower ef.
+    assert flagged_uw["interval_days"] == 0.0
     assert flagged_uw["ef"] < 2.5
     # Two reviews rows: one for target (grade=5), one for flag (grade=0).
     assert sorted(r["grade"] for r in reviews) == [0, 5]

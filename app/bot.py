@@ -502,29 +502,7 @@ async def on_grade(cq: CallbackQuery, state: FSMContext) -> None:
                 await _send_next(cq.bot, cq.message.chat.id, user_id, state)
                 return
             word_id = row["word_id"]
-            uw = conn.execute(
-                "SELECT ef, interval_days FROM user_words WHERE user_id=? AND word_id=?",
-                (user_id, word_id),
-            ).fetchone()
-            ef = uw["ef"] if uw else srs.DEFAULT_EF
-            interval = uw["interval_days"] if uw else 0.0
-            ef_new, interval_new, due_at, status_new = srs.review(ef, interval, grade)
-            conn.execute(
-                """
-                INSERT INTO user_words(user_id, word_id, status, ef, interval_days, due_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(user_id, word_id) DO UPDATE SET
-                    status = excluded.status,
-                    ef = excluded.ef,
-                    interval_days = excluded.interval_days,
-                    due_at = excluded.due_at
-                """,
-                (user_id, word_id, status_new, ef_new, interval_new, due_at.isoformat()),
-            )
-            conn.execute(
-                "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, ?, ?, NULL)",
-                (user_id, sentence_id, grade),
-            )
+            srs.record_grade(conn, user_id, grade, "user_words", {"word_id": word_id}, sentence_id)
         elif kind == "t":
             known_word_id = int(parts[3])
             direction = parts[4]
@@ -533,7 +511,8 @@ async def on_grade(cq: CallbackQuery, state: FSMContext) -> None:
                 await cq.answer()
                 await _send_next(cq.bot, cq.message.chat.id, user_id, state)
                 return
-            text_study.record_grade(conn, user_id, known_word_id, direction, grade)
+            key = {"known_word_id": known_word_id, "direction": direction}
+            srs.record_grade(conn, user_id, grade, "user_known_words", key)
     finally:
         conn.close()
     try:

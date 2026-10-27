@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS user_words (
     ef REAL NOT NULL DEFAULT 2.5,
     interval_days REAL NOT NULL DEFAULT 0,
     due_at TEXT,
+    requeue_after INTEGER,
     PRIMARY KEY (user_id, word_id)
 );
 CREATE INDEX IF NOT EXISTS ix_user_words_due ON user_words(user_id, due_at);
@@ -115,9 +116,10 @@ def init_schema(conn: sqlite3.Connection) -> None:
 
 
 def _add_requeue_column(conn: sqlite3.Connection) -> None:
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(user_known_words)")}
-    if "requeue_after" not in cols:
-        conn.execute("ALTER TABLE user_known_words ADD COLUMN requeue_after INTEGER")
+    for table in ("user_words", "user_known_words"):
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if "requeue_after" not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN requeue_after INTEGER")
 
 
 def _in_transaction(conn: sqlite3.Connection, step) -> None:

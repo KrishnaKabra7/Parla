@@ -491,55 +491,11 @@ async def grade(
         if row is None:
             raise HTTPException(404)
         word_id = row["word_id"]
-        uw = conn.execute(
-            "SELECT ef, interval_days FROM user_words WHERE user_id=? AND word_id=?",
-            (user_id, word_id),
-        ).fetchone()
-        ef = uw["ef"] if uw else srs.DEFAULT_EF
-        interval = uw["interval_days"] if uw else 0.0
-        ef_new, interval_new, due_at, status_new = srs.review(ef, interval, grade)
-        conn.execute(
-            """
-            INSERT INTO user_words(user_id, word_id, status, ef, interval_days, due_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(user_id, word_id) DO UPDATE SET
-                status = excluded.status,
-                ef = excluded.ef,
-                interval_days = excluded.interval_days,
-                due_at = excluded.due_at
-            """,
-            (user_id, word_id, status_new, ef_new, interval_new, due_at.isoformat()),
-        )
-        conn.execute(
-            "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, ?, ?, ?)",
-            (user_id, sentence_id, grade, typed),
-        )
+        srs.record_grade(conn, user_id, grade, "user_words", {"word_id": word_id}, sentence_id, typed)
         for fid in flagged_word_ids:
-            if fid == word_id:
-                continue
-            fuw = conn.execute(
-                "SELECT ef, interval_days FROM user_words WHERE user_id=? AND word_id=?",
-                (user_id, fid),
-            ).fetchone()
-            if fuw is None:
-                continue
-            f_ef, f_int, f_due, f_status = srs.review(fuw["ef"], fuw["interval_days"], 0)
-            conn.execute(
-                """
-                INSERT INTO user_words(user_id, word_id, status, ef, interval_days, due_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(user_id, word_id) DO UPDATE SET
-                    status = excluded.status,
-                    ef = excluded.ef,
-                    interval_days = excluded.interval_days,
-                    due_at = excluded.due_at
-                """,
-                (user_id, fid, f_status, f_ef, f_int, f_due.isoformat()),
-            )
-            conn.execute(
-                "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, ?, ?, ?)",
-                (user_id, sentence_id, 0, typed),
-            )
+            seen = conn.execute("SELECT 1 FROM user_words WHERE user_id=? AND word_id=?", (user_id, fid)).fetchone()
+            if fid != word_id and seen:
+                srs.record_grade(conn, user_id, srs.Grade.AGAIN, "user_words", {"word_id": fid}, sentence_id, typed)
         ctx = await _prepare_card(conn, user_id, client, mode)
     finally:
         conn.close()
@@ -608,7 +564,8 @@ async def grade_text(
         ).fetchone()
         if exists is None:
             raise HTTPException(404)
-        text_study.record_grade(conn, user_id, known_word_id, direction, grade, typed)
+        key = {"known_word_id": known_word_id, "direction": direction}
+        srs.record_grade(conn, user_id, grade, "user_known_words", key, typed=typed)
         ctx = await _prepare_card(conn, user_id, client, mode)
     finally:
         conn.close()
