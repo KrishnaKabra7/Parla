@@ -1,4 +1,5 @@
 import random
+import unicodedata
 
 from app.translit import to_cyrillic, to_latin
 
@@ -31,6 +32,21 @@ Rules:
 - The target word should appear in a common inflected form appropriate to the sentence, not only the citation form.
 - If the known list is empty or too small to build 3 natural sentences, generate the most natural short (4-9 word) sentences you can that use the target word, keeping them minimal and beginner-friendly."""
 
+SYSTEM_PROMPT_ES = """You generate short Spanish sentences for a vocabulary-trainer app.
+
+Given a target Spanish word and a list of Spanish words the learner already knows, output STRICT JSON in this exact shape (and nothing else — no prose, no code fences):
+
+{"gloss_en": "<English translation of the target word>", "sentences": [{"text": "<Spanish sentence>", "gloss_en": "<English translation>"}, {"text": "...", "gloss_en": "..."}, {"text": "...", "gloss_en": "..."}]}
+
+Rules:
+- Exactly 3 sentences.
+- Each sentence is 4-9 words.
+- Natural spoken register (things a native speaker would actually say), in neutral Spanish.
+- Every content word other than the target MUST come from the known-words list. Function words (articles, prepositions, pronouns, common conjunctions, forms of ser/estar/haber/tener) are always allowed.
+- Use correct accents and inverted punctuation (¿ ¡).
+- The target word should appear in a common inflected form appropriate to the sentence, not only the citation form.
+- If the known list is empty or too small to build 3 natural sentences, generate the most natural short (4-9 word) sentences you can that use the target word, keeping them minimal and beginner-friendly."""
+
 _DE_UMLAUTS = str.maketrans({"ä": "a", "ö": "o", "ü": "u", "ß": "ss"})
 
 
@@ -43,6 +59,12 @@ def _fold_de(s: str) -> str:
     # German keyboard aren't marked wrong. Applied to both sides of a compare.
     s = s.lower().replace("ae", "a").replace("oe", "o").replace("ue", "u")
     return s.translate(_DE_UMLAUTS)
+
+
+def _fold_es(s: str) -> str:
+    # Accents and ñ are optional when typing; applied to both sides of a compare.
+    s = unicodedata.normalize("NFD", s.lower())
+    return "".join(c for c in s if not unicodedata.combining(c))
 
 
 LANGS = {
@@ -64,6 +86,16 @@ LANGS = {
         "voice": "de-DE-ConradNeural",
         "system_prompt": SYSTEM_PROMPT_DE,
         "fold": _fold_de,
+        "romanize": lambda s: None,
+    },
+    "es": {
+        "name": "Spanish",
+        "flag": "🇪🇸",
+        "freq_file": "data/es_freq.txt",
+        "known_file": "data/known_words_es.txt",
+        "voice": "es-ES-AlvaroNeural",
+        "system_prompt": SYSTEM_PROMPT_ES,
+        "fold": _fold_es,
         "romanize": lambda s: None,
     },
 }

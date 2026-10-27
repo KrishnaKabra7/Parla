@@ -30,3 +30,9 @@ def test_german_flags_known_word_stems():
 def test_german_diff_strips_german_quotes():
     toks = diff_and_highlight("Er sagt: „Hallo“.", "er sagt hallo", "hallo", "de")
     assert all(t.matched for t in toks)
+
+
+def test_spanish_diff_strips_inverted_marks_and_accents():
+    toks = diff_and_highlight("¿Dónde está mi niño?", "donde esta mi nino", "niño", "es")
+    assert all(t.matched for t in toks)
+    assert [t.is_target for t in toks] == [False, False, False, True]

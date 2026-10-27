@@ -105,7 +105,7 @@ def ensure_user_known_word(conn: Connection, user_id: int, known_word_id: int, d
 
 
 _GLOSS_STRIP = re.compile(r"\s*\([^)]*\)")
-_PUNCT = ".,!?;:'\""
+_PUNCT = ".,!?;:'\"¿¡"
 
 
 def _norm_english(s: str) -> str:

@@ -102,7 +102,7 @@ def pick_sentence(conn: Connection, word_id: int) -> Row | None:
     ).fetchone()
 
 
-_STRIP = ".,!?;:'\"()[]«»„“‚‘…—-"
+_STRIP = ".,!?;:'\"()[]«»„“‚‘…—-¿¡"
 
 
 def _norm(tok: str, lang: str) -> str:

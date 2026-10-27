@@ -1,0 +1,503 @@
+# Seed list for Spanish text-to-text drills. Format: target||english
+# The middle (romanized) field is empty for Latin-script languages.
+# Roughly the 500 most frequent words, in frequency order.
+sí||yes
+no||no, not
+de||of, from
+que||that, which (conj)
+a||to, at
+la||the (fem), her (obj)
+el||the (masc)
+y||and
+es||is (ser)
+en||in, on
+lo||it (obj), him (obj)
+un||a (masc)
+por||for, by, through
+qué||what
+me||me (obj)
+una||a (fem)
+los||the (masc pl)
+se||oneself (reflexive)
+te||you (obj, informal)
+con||with
+para||for, in order to
+está||is (estar)
+mi||my
+pero||but
+si||if
+bien||well, good (adverb)
+eso||that (neut)
+su||his, her, their, your (formal)
+las||the (fem pl)
+yo||I
+del||of the
+como||like, as
+aquí||here
+tu||your (informal)
+al||to the
+más||more
+le||him, her (indirect obj)
+esto||this (neut)
+todo||everything, all
+ya||already
+estoy||I am (estar)
+ahora||now
+muy||very
+ha||has (auxiliary)
+esta||this (fem)
+así||like this, so
+vamos||let's go, we go
+algo||something
+hay||there is, there are
+bueno||good (masc), well
+tengo||I have
+él||he
+cuando||when
+estás||you are (estar, tú)
+sé||I know
+tú||you (subject, informal)
+nos||us
+nada||nothing
+cómo||how
+este||this (masc)
+o||or
+he||I have (auxiliary)
+ser||to be (permanent)
+tiene||has
+puedo||I can
+ella||she
+quiero||I want
+hacer||to do, to make
+fue||was, went (he/she)
+gracias||thanks, thank you
+vez||time (occasion)
+era||was (imperfect, he/she)
+soy||I am (ser)
+todos||everyone, all (masc pl)
+porque||because
+son||are (ser, they)
+tienes||you have (tú)
+creo||I think, I believe
+voy||I go, I'm going
+sabes||you know (tú)
+estaba||was (estar, he/she)
+puede||can (he/she)
+eres||you are (ser, tú)
+ese||that (masc)
+usted||you (formal)
+entonces||then, so
+hola||hello, hi
+solo||only, alone
+verdad||truth, true
+casa||house, home
+tan||so (tan bueno)
+quién||who
+sus||his, her, their (pl)
+tiempo||time, weather
+dos||two
+esa||that (fem)
+nunca||never
+dónde||where
+va||goes
+favor||favor (por favor = please)
+mucho||a lot, much
+mí||me (after preposition)
+quieres||you want (tú)
+siento||I feel, I'm sorry (lo siento)
+señor||sir, Mr
+mejor||better, best
+hace||does, makes, ago
+has||you have (auxiliary, tú)
+decir||to say, to tell
+también||also, too
+sobre||about, on
+dios||God
+sin||without
+tenemos||we have
+están||are (estar, they)
+ti||you (after preposition)
+puedes||you can (tú)
+ver||to see
+hombre||man
+vida||life
+alguien||someone
+cosas||things
+siempre||always
+hasta||until
+ahí||there
+ir||to go
+años||years
+antes||before
+estar||to be (state, location)
+ni||nor, not even
+poco||little, few
+día||day
+uno||one
+noche||night
+hecho||done, fact
+mis||my (pl)
+estamos||we are (estar)
+otra||another (fem), other
+acuerdo||agreement (de acuerdo = okay)
+trabajo||work, job
+nosotros||we
+parece||seems
+gente||people
+sea||be (subjunctive)
+padre||father
+mira||look!
+mismo||same
+dijo||said (he/she)
+nadie||nobody, no one
+quiere||wants
+podría||could (I/he/she)
+hablar||to speak, to talk
+vas||you go (tú)
+ellos||they
+tal||such
+pasa||happens
+fuera||outside
+después||after, afterwards
+han||have (auxiliary, they)
+desde||since, from
+dinero||money
+mundo||world
+claro||clear, of course
+momento||moment
+les||them (indirect obj)
+tener||to have
+estado||been, state
+otro||another (masc), other
+había||there was, had (auxiliary)
+mañana||tomorrow, morning
+tenía||had (imperfect, I/he/she)
+madre||mother
+vale||okay
+lugar||place
+haciendo||doing, making
+donde||where (relative)
+seguro||sure, safe
+sabe||knows
+podemos||we can
+tus||your (pl, informal)
+espera||wait!
+nuevo||new
+sido||been (ser)
+cosa||thing
+hijo||son
+allí||there (over there)
+menos||less
+tipo||guy, type
+amigo||friend (male)
+gran||great, big
+nuestro||our (masc)
+mujer||woman, wife
+mamá||mom
+luego||later, then
+papá||dad
+días||days
+dice||says
+hoy||today
+tres||three
+buena||good (fem)
+necesito||I need
+dije||I said
+oye||hey, listen
+gusta||likes (me gusta = I like)
+quería||I wanted
+será||will be
+haber||to have (auxiliary)
+parte||part
+todas||all (fem pl)
+crees||you think (tú)
+buen||good (before masc noun)
+conmigo||with me
+nombre||name
+nuestra||our (fem)
+mal||bad, badly
+debe||must (he/she)
+realmente||really
+estas||these (fem)
+aún||still, yet
+mío||mine
+toda||all, whole (fem)
+cada||each, every
+visto||seen
+importa||matters
+contigo||with you
+tienen||they have
+hemos||we have (auxiliary)
+razón||reason (tener razón = to be right)
+alguna||some (fem)
+tanto||so much
+saber||to know
+hizo||did, made (he/she)
+veces||times (occasions)
+serio||serious
+ven||come!
+idea||idea
+tarde||late, afternoon
+problema||problem
+hora||hour, time
+cierto||true, certain
+dicho||said (participle)
+quien||who (relative)
+demasiado||too much
+amor||love
+entre||between
+pasado||past
+familia||family
+estos||these (masc)
+policía||police
+debería||should (I/he/she)
+ustedes||you (pl)
+chica||girl
+esos||those (masc)
+chicos||guys, kids
+cuenta||account, bill
+haces||you do (tú)
+todavía||still, yet
+salir||to leave, to go out
+algún||some (before masc noun)
+vaya||wow, go (subjunctive)
+unos||some (masc pl)
+veo||I see
+amigos||friends
+hermano||brother
+pensé||I thought
+sabía||I knew
+cabeza||head
+cariño||darling, affection
+digo||I say
+van||they go
+hombres||men
+buenas||good (fem pl)
+somos||we are (ser)
+cualquier||any
+forma||form, way
+mientras||while
+lado||side
+debo||I must
+sería||would be
+caso||case
+pueden||they can
+pasó||happened
+primera||first (fem)
+genial||great, awesome
+chico||boy
+supuesto||supposed (por supuesto = of course)
+hice||I did, I made
+pues||well, then
+adiós||goodbye, bye
+muchas||many (fem)
+personas||people (persons)
+señora||lady, Mrs
+volver||to return, to come back
+esas||those (fem)
+quizá||perhaps
+contra||against
+camino||road, way, path
+durante||during
+hablando||speaking, talking
+muerto||dead
+persona||person
+rápido||fast, quickly
+cuál||which
+ayuda||help
+historia||story, history
+iba||was going
+supongo||I suppose
+nueva||new (fem)
+entiendo||I understand
+dentro||inside
+casi||almost
+puerta||door
+ves||you see (tú)
+pasar||to pass, to happen
+primero||first
+significa||means
+semana||week
+hacia||toward
+quizás||maybe
+espero||I hope, I wait
+juntos||together
+año||year
+niños||children, kids
+pronto||soon
+tío||uncle, dude
+suerte||luck
+ciudad||city
+siquiera||even (ni siquiera = not even)
+feliz||happy
+venir||to come
+hija||daughter
+gustaría||would like (me gustaría)
+minutos||minutes
+cuánto||how much
+os||you (pl obj, Spain)
+muerte||death
+dejar||to leave, to let
+realidad||reality
+deja||leave!, let!
+problemas||problems
+vi||I saw
+da||gives
+importante||important
+dijiste||you said (tú)
+corazón||heart
+miedo||fear
+jefe||boss
+agua||water
+haré||I will do
+justo||just, fair
+horas||hours
+poder||to be able to, power
+buenos||good (masc pl)
+esposa||wife (spouse)
+manos||hands
+debes||you must (tú)
+viene||comes
+venga||come on
+nuestros||our (masc pl)
+ojos||eyes
+adelante||forward, go ahead
+encontrar||to find
+mano||hand
+cinco||five
+niño||child, boy
+ninguna||none, no (fem)
+otros||others
+cara||face
+cuidado||care, careful
+bajo||under, low
+cerca||near, close
+viejo||old (masc)
+déjame||let me
+noches||nights
+bastante||enough, quite
+fin||end
+tomar||to take, to drink
+único||only, unique
+misma||same (fem)
+escucha||listen!
+ningún||no, not any (masc)
+suficiente||enough (suficiente)
+punto||point
+cuándo||when (question)
+sigue||continues, keep going
+haya||there is (subjunctive), has (subjunctive)
+equipo||team
+grande||big, large
+necesita||needs
+llegar||to arrive
+incluso||even (incluso)
+algunos||some (masc pl)
+doctor||doctor
+difícil||difficult, hard
+aunque||although
+hubiera||had (subjunctive)
+primer||first (before masc noun)
+coche||car
+hago||I do, I make
+clase||class
+cuatro||four
+dices||you say (tú)
+pequeño||small, little (masc)
+llama||calls
+toma||take!, takes
+hiciste||you did (tú)
+allá||over there
+última||last (fem)
+arriba||up, upstairs
+tierra||earth, land
+guerra||war
+pensar||to think
+pueda||can (subjunctive)
+igual||same, equal
+loco||crazy
+sangre||blood
+mujeres||women
+vuelta||turn, return
+fui||I went, I was
+trabajar||to work
+tenido||had (participle)
+juego||game
+deberías||you should (tú)
+cuerpo||body
+algunas||some (fem pl)
+entrar||to enter, to go in
+cree||believes
+podía||could (imperfect)
+debemos||we must
+oportunidad||opportunity, chance
+teléfono||telephone
+necesitamos||we need
+final||end, final
+listo||ready, clever
+fiesta||party
+muchos||many (masc)
+estabas||you were (estar, tú)
+quieren||they want
+vete||go away!
+dar||to give
+vivir||to live
+posible||possible
+hermana||sister
+número||number
+meses||months
+exactamente||exactly
+culpa||fault, blame
+abajo||down, downstairs
+escuela||school
+ido||gone
+fuerte||strong
+diciendo||saying
+habla||speaks
+esté||is (estar, subjunctive)
+ello||it (neut)
+pregunta||question
+chicas||girls
+eran||were (they)
+unas||some (fem pl)
+pasando||happening
+atrás||back, behind
+malo||bad (masc)
+segundo||second
+sabemos||we know
+mayor||older, bigger
+comida||food
+morir||to die
+conozco||I know (someone)
+dame||give me
+fácil||easy
+comer||to eat
+vino||wine, came (he/she)
+lista||list, ready (fem)
+haga||do (subjunctive)
+necesitas||you need (tú)
+hijos||children (sons)
+probablemente||probably
+padres||parents
+habitación||room
+creer||to believe
+pensando||thinking
+fueron||were, went (they)
+dime||tell me
+trata||tries, is about
+buscando||looking for
+tuve||I had
+tampoco||neither, either
+amo||I love
+joven||young
+podrías||you could (tú)
+sola||alone (fem)
+par||pair, couple
+única||only, unique (fem)
+hacen||they do
+seguir||to follow, to continue
+simplemente||simply
+dicen||they say
+medio||half, middle
+saben||they know
+sentido||sense, meaning
