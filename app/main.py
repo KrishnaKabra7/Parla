@@ -608,29 +608,7 @@ async def grade_text(
         ).fetchone()
         if exists is None:
             raise HTTPException(404)
-        ukw = conn.execute(
-            "SELECT ef, interval_days FROM user_known_words WHERE user_id=? AND known_word_id=? AND direction=?",
-            (user_id, known_word_id, direction),
-        ).fetchone()
-        ef = ukw["ef"] if ukw else srs.DEFAULT_EF
-        interval = ukw["interval_days"] if ukw else 0.0
-        ef_new, interval_new, due_at, status_new = srs.review(ef, interval, grade)
-        conn.execute(
-            """
-            INSERT INTO user_known_words(user_id, known_word_id, direction, status, ef, interval_days, due_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(user_id, known_word_id, direction) DO UPDATE SET
-                status = excluded.status,
-                ef = excluded.ef,
-                interval_days = excluded.interval_days,
-                due_at = excluded.due_at
-            """,
-            (user_id, known_word_id, direction, status_new, ef_new, interval_new, due_at.isoformat()),
-        )
-        conn.execute(
-            "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, NULL, ?, ?)",
-            (user_id, grade, typed),
-        )
+        text_study.record_grade(conn, user_id, known_word_id, direction, grade, typed)
         ctx = await _prepare_card(conn, user_id, client, mode)
     finally:
         conn.close()

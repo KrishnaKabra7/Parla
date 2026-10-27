@@ -3,6 +3,7 @@ import re
 from dataclasses import dataclass
 from sqlite3 import Connection
 
+from app import srs
 from app.langs import LANGS
 from app.translit import has_cyrillic, to_cyrillic, to_latin
 
@@ -10,6 +11,7 @@ EN_TO_TL = "en_to_tl"
 TL_TO_EN = "tl_to_en"
 DIRECTIONS = (EN_TO_TL, TL_TO_EN)
 EN_TO_TL_WEIGHT = 0.75
+REQUEUE_MIN, REQUEUE_MAX = 5, 10
 
 
 @dataclass
@@ -38,13 +40,32 @@ def _card(row, direction: str) -> TextCard:
     )
 
 
+def _review_count(conn: Connection, user_id: int) -> int:
+    return conn.execute("SELECT COUNT(*) FROM reviews WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+
+def _pick_requeued(conn: Connection, user_id: int, lang: str, ready_only: bool = True) -> TextCard | None:
+    limit = _review_count(conn, user_id) if ready_only else 2**62
+    row = conn.execute(
+        """
+        SELECT kw.id, kw.lang, kw.target, kw.romanized, kw.english, ukw.direction FROM user_known_words ukw
+        JOIN known_words kw ON kw.id = ukw.known_word_id
+        WHERE ukw.user_id = ? AND kw.lang = ? AND ukw.requeue_after <= ?
+        ORDER BY ukw.requeue_after ASC LIMIT 1
+        """,
+        (user_id, lang, limit),
+    ).fetchone()
+    return _card(row, row["direction"]) if row else None
+
+
 def _pick_in_direction(conn: Connection, user_id: int, lang: str, direction: str) -> TextCard | None:
     due = conn.execute(
         """
         SELECT kw.id, kw.lang, kw.target, kw.romanized, kw.english FROM user_known_words ukw
         JOIN known_words kw ON kw.id = ukw.known_word_id
         WHERE ukw.user_id = ? AND ukw.direction = ? AND kw.lang = ?
-          AND ukw.due_at IS NOT NULL AND ukw.due_at <= datetime('now')
+          AND ukw.requeue_after IS NULL
+          AND ukw.due_at IS NOT NULL AND datetime(ukw.due_at) <= datetime('now')
         ORDER BY ukw.due_at ASC LIMIT 1
         """,
         (user_id, direction, lang),
@@ -68,12 +89,18 @@ def _pick_in_direction(conn: Connection, user_id: int, lang: str, direction: str
 
 
 def pick_card(conn: Connection, user_id: int, lang: str, rng: random.Random | None = None) -> TextCard | None:
+    requeued = _pick_requeued(conn, user_id, lang)
+    if requeued is not None:
+        return requeued
     direction = pick_direction(rng)
     card = _pick_in_direction(conn, user_id, lang, direction)
     if card is not None:
         return card
     other = TL_TO_EN if direction == EN_TO_TL else EN_TO_TL
-    return _pick_in_direction(conn, user_id, lang, other)
+    card = _pick_in_direction(conn, user_id, lang, other)
+    if card is not None:
+        return card
+    return _pick_requeued(conn, user_id, lang, ready_only=False)
 
 
 def load_card(conn: Connection, known_word_id: int, direction: str) -> TextCard | None:
@@ -95,6 +122,48 @@ def normalize_known_word(lang: str, target: str, romanized: str) -> tuple[str, s
         target = to_cyrillic(target)
     target = target or to_cyrillic(romanized)
     return target, romanized or (to_latin(target) if target else "")
+
+
+def record_grade(
+    conn: Connection,
+    user_id: int,
+    known_word_id: int,
+    direction: str,
+    grade: int,
+    typed: str | None = None,
+    rng: random.Random | None = None,
+) -> None:
+    """Apply SM-2 and log the review. "Again" brings the card back after
+    5-10 more graded cards instead of tomorrow; the next pass then
+    schedules it from a zero interval."""
+    ukw = conn.execute(
+        "SELECT ef, interval_days FROM user_known_words WHERE user_id=? AND known_word_id=? AND direction=?",
+        (user_id, known_word_id, direction),
+    ).fetchone()
+    ef = ukw["ef"] if ukw else srs.DEFAULT_EF
+    interval = ukw["interval_days"] if ukw else 0.0
+    ef_new, interval_new, due_at, status_new = srs.review(ef, interval, grade)
+    conn.execute(
+        "INSERT INTO reviews(user_id, sentence_id, grade, typed_answer) VALUES (?, NULL, ?, ?)",
+        (user_id, grade, typed),
+    )
+    requeue_after = None
+    if grade == srs.Grade.AGAIN:
+        interval_new = 0.0
+        requeue_after = _review_count(conn, user_id) + (rng or random).randint(REQUEUE_MIN, REQUEUE_MAX)
+    conn.execute(
+        """
+        INSERT INTO user_known_words(user_id, known_word_id, direction, status, ef, interval_days, due_at, requeue_after)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id, known_word_id, direction) DO UPDATE SET
+            status = excluded.status,
+            ef = excluded.ef,
+            interval_days = excluded.interval_days,
+            due_at = excluded.due_at,
+            requeue_after = excluded.requeue_after
+        """,
+        (user_id, known_word_id, direction, status_new, ef_new, interval_new, due_at.isoformat(), requeue_after),
+    )
 
 
 def ensure_user_known_word(conn: Connection, user_id: int, known_word_id: int, direction: str) -> None:

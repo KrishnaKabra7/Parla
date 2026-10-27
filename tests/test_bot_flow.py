@@ -386,3 +386,25 @@ def test_russian_voice_reveal_keeps_latin_line(bot_setup):
     tokens = [Token(text="Да.", matched=True, is_target=True)]
     out = render.voice_reveal(tokens, "Yes.", "ru")
     assert len(out.split("\n")) == 3
+
+
+async def test_telegram_again_requeues_text_card(bot_setup):
+    bot = bot_setup["bot_mod"]
+    db = bot_setup["db"]
+    uid = bot._ensure_user(509)
+    _set_langs(bot_setup, uid, ["de"])
+    conn = db.connect()
+    kwid = conn.execute("SELECT id FROM known_words WHERE lang='de' AND target='ich'").fetchone()["id"]
+    conn.close()
+    b = _fake_bot()
+    await bot.on_grade(_cq(509, f"g:0:t:{kwid}:en_to_tl", b), _state(509))
+    conn = db.connect()
+    row = conn.execute(
+        "SELECT interval_days, requeue_after FROM user_known_words WHERE user_id = ? AND known_word_id = ?",
+        (uid, kwid),
+    ).fetchone()
+    reviews = conn.execute("SELECT COUNT(*) FROM reviews WHERE user_id = ?", (uid,)).fetchone()[0]
+    conn.close()
+    assert row["interval_days"] == 0
+    assert row["requeue_after"] is not None
+    assert reviews == 1

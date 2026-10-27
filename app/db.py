@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS user_known_words (
     ef REAL NOT NULL DEFAULT 2.5,
     interval_days REAL NOT NULL DEFAULT 0,
     due_at TEXT,
+    requeue_after INTEGER,
     PRIMARY KEY (user_id, known_word_id, direction)
 );
 CREATE INDEX IF NOT EXISTS ix_user_known_words_due ON user_known_words(user_id, due_at);
@@ -110,6 +111,13 @@ def init_schema(conn: sqlite3.Connection) -> None:
     _migrate_reviews_sentence_fk(conn)
     _in_transaction(conn, _migrate_known_words_columns)
     _in_transaction(conn, _create_user_langs)
+    _in_transaction(conn, _add_requeue_column)
+
+
+def _add_requeue_column(conn: sqlite3.Connection) -> None:
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(user_known_words)")}
+    if "requeue_after" not in cols:
+        conn.execute("ALTER TABLE user_known_words ADD COLUMN requeue_after INTEGER")
 
 
 def _in_transaction(conn: sqlite3.Connection, step) -> None:
