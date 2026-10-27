@@ -222,3 +222,29 @@ def test_text_card_falls_back_to_other_direction_when_empty(client: TestClient):
 def test_check_answer_es_ignores_accents_and_inverted_marks():
     card = _card("¿qué?", "", "what", text_study.EN_TO_TL, lang="es")
     assert text_study.check_answer(card, "que")
+
+
+def test_new_cards_follow_seed_order_within_a_batch(client: TestClient):
+    conn = db.connect()
+    conn.execute("DELETE FROM known_words WHERE lang = 'de'")
+    conn.executemany(
+        "INSERT INTO known_words(lang, target, romanized, english, created_at) VALUES ('de', ?, '', ?, '2020-01-01')",
+        [("ich", "I"), ("sie", "she"), ("das", "the")],
+    )
+    uid = conn.execute("INSERT INTO users(name) VALUES ('order') RETURNING id").fetchone()["id"]
+    card = text_study.pick_card(conn, uid, "de", random.Random(0))
+    assert card.target == "ich"
+    conn.close()
+
+
+def test_new_cards_prefer_later_added_words(client: TestClient):
+    conn = db.connect()
+    conn.execute("DELETE FROM known_words WHERE lang = 'de'")
+    conn.executemany(
+        "INSERT INTO known_words(lang, target, romanized, english, created_at) VALUES ('de', ?, '', ?, ?)",
+        [("ich", "I", "2020-01-01"), ("Katze", "cat", "2021-01-01")],
+    )
+    uid = conn.execute("INSERT INTO users(name) VALUES ('order2') RETURNING id").fetchone()["id"]
+    card = text_study.pick_card(conn, uid, "de", random.Random(0))
+    assert card.target == "Katze"
+    conn.close()

@@ -58,7 +58,7 @@ def _pick_in_direction(conn: Connection, user_id: int, lang: str, direction: str
             SELECT known_word_id FROM user_known_words
             WHERE user_id = ? AND direction = ?
         )
-        ORDER BY kw.created_at DESC, kw.id DESC LIMIT 1
+        ORDER BY kw.created_at DESC, kw.id ASC LIMIT 1
         """,
         (lang, user_id, direction),
     ).fetchone()
