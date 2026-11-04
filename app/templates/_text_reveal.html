@@ -1,7 +1,13 @@
 <div id="card" class="card">
     <p class="lang-label muted">{{ lang_flag }} {{ lang_name }}</p>
     <p class="reveal">
+    {%- if tokens -%}
+        {%- for tok in tokens -%}<span class="tok{% if tok.matched %} good{% endif %}{% if tok.is_target %} target{% endif %}">{{ tok.text }}</span>{{ " " }}{%- endfor -%}
+    {%- elif correct is defined -%}
         <span class="tok {% if correct %}good{% else %}bad{% endif %}">{{ target }}</span>
+    {%- else -%}
+        <span class="tok">{{ target }}</span>
+    {%- endif -%}
     </p>
     {% if romanized %}<p class="translit">{{ romanized }}</p>{% endif %}
     <p class="gloss">{{ english }}</p>

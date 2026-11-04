@@ -3,8 +3,8 @@ import re
 from dataclasses import dataclass
 from sqlite3 import Connection
 
-from app import srs
-from app.langs import LANGS
+from app import gen, srs
+from app.langs import LANGS, TEXT_SYSTEM_PROMPT
 from app.translit import has_cyrillic, to_cyrillic, to_latin
 
 EN_TO_TL = "en_to_tl"
@@ -117,6 +117,46 @@ def normalize_known_word(lang: str, target: str, romanized: str) -> tuple[str, s
         target = to_cyrillic(target)
     target = target or to_cyrillic(romanized)
     return target, romanized or (to_latin(target) if target else "")
+
+
+def card_status(conn: Connection, user_id: int, card: TextCard) -> str | None:
+    row = conn.execute(
+        "SELECT status FROM user_known_words WHERE user_id = ? AND known_word_id = ? AND direction = ?",
+        (user_id, card.known_word_id, card.direction),
+    ).fetchone()
+    return row["status"] if row else None
+
+
+def ensure_sentences(conn: Connection, card: TextCard, client) -> None:
+    if conn.execute("SELECT 1 FROM known_sentences WHERE known_word_id = ?", (card.known_word_id,)).fetchone():
+        return
+    known = [
+        r["target"]
+        for r in conn.execute(
+            "SELECT target FROM known_words WHERE lang = ? AND id != ?", (card.lang, card.known_word_id)
+        )
+    ]
+    prompt = TEXT_SYSTEM_PROMPT.format(name=LANGS[card.lang]["name"])
+    result = gen.generate(card.lang, f"{card.target} ({card.english})", known, client=client, system_prompt=prompt)
+    # gen's fallback is the bare word with no gloss; storing it would just
+    # make a "sentence" card that duplicates the word card.
+    conn.executemany(
+        "INSERT INTO known_sentences(known_word_id, text, gloss_en) VALUES (?, ?, ?)",
+        [(card.known_word_id, s.text, s.gloss_en) for s in result.sentences if s.gloss_en],
+    )
+
+
+def pick_sentence(conn: Connection, known_word_id: int):
+    return conn.execute(
+        "SELECT id, text, gloss_en FROM known_sentences WHERE known_word_id = ? ORDER BY RANDOM() LIMIT 1",
+        (known_word_id,),
+    ).fetchone()
+
+
+def load_sentence(conn: Connection, sentence_id: int):
+    return conn.execute(
+        "SELECT id, known_word_id, text, gloss_en FROM known_sentences WHERE id = ?", (sentence_id,)
+    ).fetchone()
 
 
 def ensure_user_known_word(conn: Connection, user_id: int, known_word_id: int, direction: str) -> None:

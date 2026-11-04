@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from app import study, text_study
+from app import db, study, text_study
 from app.langs import LANGS
 
 _MDV2_SPECIALS = r"_*[]()~`>#+-=|{}.!\\"
@@ -18,11 +18,13 @@ def voice_prompt(lang: str) -> str:
     return f"{lang_label(lang)}\n" + esc("Type what you heard.")
 
 
-def text_prompt(card: text_study.TextCard) -> str:
-    if card.direction == text_study.EN_TO_TL:
-        prompt, hint = card.english, LANGS[card.lang]["name"]
+def text_prompt(card: text_study.TextCard, sentence=None) -> str:
+    to_tl = card.direction == text_study.EN_TO_TL
+    if sentence is not None:
+        prompt = sentence["gloss_en"] if to_tl else sentence["text"]
     else:
-        prompt, hint = card.target, "English"
+        prompt = card.english if to_tl else card.target
+    hint = LANGS[card.lang]["name"] if to_tl else "English"
     return f"{lang_label(card.lang)}\n*{esc(prompt)}*\n_Answer in {esc(hint)}_"
 
 
@@ -56,6 +58,16 @@ def text_reveal(card: text_study.TextCard, correct: bool, typed: str) -> str:
     return "\n".join(lines)
 
 
+def text_sentence_reveal(card: text_study.TextCard, sentence, typed: str) -> str:
+    lines = [f"*{esc(sentence['text'])}*"]
+    if romanized := LANGS[card.lang]["romanize"](sentence["text"]):
+        lines.append(f"_{esc(romanized)}_")
+    lines.append(esc(sentence["gloss_en"]))
+    if typed:
+        lines.append(f"_you typed:_ {esc(typed)}")
+    return "\n".join(lines)
+
+
 def grade_keyboard(kind: str, *ids: object) -> InlineKeyboardMarkup:
     payload = ":".join(str(x) for x in ids)
     row = [
@@ -67,13 +79,16 @@ def grade_keyboard(kind: str, *ids: object) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[row])
 
 
-def mode_keyboard() -> InlineKeyboardMarkup:
-    row = [
-        InlineKeyboardButton(text="mixed", callback_data="mode:mixed"),
-        InlineKeyboardButton(text="voice", callback_data="mode:voice"),
-        InlineKeyboardButton(text="text", callback_data="mode:text"),
-    ]
-    return InlineKeyboardMarkup(inline_keyboard=[row])
+def mode_keyboard(prefs: dict[str, str]) -> InlineKeyboardMarkup:
+    def row(prefix: str, key: str, values: tuple[str, ...]) -> list[InlineKeyboardButton]:
+        return [
+            InlineKeyboardButton(
+                text=f"{'✅ ' if prefs[key] == v else ''}{'mix' if v == 'mixed' else v}",
+                callback_data=f"{prefix}:{v}",
+            )
+            for v in values
+        ]
+    return InlineKeyboardMarkup(inline_keyboard=[row("mode", "mode", db.MODES), row("len", "length", db.LENGTHS)])
 
 
 def lang_keyboard(chosen: list[str]) -> InlineKeyboardMarkup:

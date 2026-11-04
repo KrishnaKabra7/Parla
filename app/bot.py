@@ -13,7 +13,7 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from anthropic import Anthropic
 
 from app import bot_render, db, srs, study, text_study
-from app.langs import LANGS, candidates
+from app.langs import LANGS
 
 AUDIO_DIR = "data/audio"
 
@@ -72,29 +72,28 @@ def _link_user(chat_id: int, name: str) -> int:
         conn.close()
 
 
-def _mode(user_id: int) -> str:
+def _prefs(user_id: int) -> dict[str, str]:
     conn = db.connect()
     try:
-        row = conn.execute(
-            "SELECT mode FROM user_prefs WHERE user_id = ?", (user_id,)
-        ).fetchone()
+        return db.get_prefs(conn, user_id)
     finally:
         conn.close()
-    return row["mode"] if row else "mixed"
+
+
+def _mode(user_id: int) -> str:
+    return _prefs(user_id)["mode"]
+
+
+def _set_pref(user_id: int, key: str, value: str) -> None:
+    conn = db.connect()
+    try:
+        db.set_pref(conn, user_id, key, value)
+    finally:
+        conn.close()
 
 
 def _set_mode(user_id: int, mode: str) -> None:
-    conn = db.connect()
-    try:
-        conn.execute(
-            """
-            INSERT INTO user_prefs(user_id, mode) VALUES (?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET mode = excluded.mode
-            """,
-            (user_id, mode),
-        )
-    finally:
-        conn.close()
+    _set_pref(user_id, "mode", mode)
 
 
 def _user_langs(user_id: int) -> list[str]:
@@ -113,31 +112,6 @@ def _set_user_langs(user_id: int, langs: list[str]) -> None:
         conn.close()
 
 
-async def _prepare_voice(user_id: int, lang: str) -> tuple[int, str] | None:
-    conn = db.connect()
-    try:
-        item = study.pick_next(conn, user_id, lang)
-        if item is None:
-            return None
-        await study.ensure_sentences(conn, item.word_id, item.lemma, lang, user_id, _anthropic())
-        if item.is_new:
-            study.ensure_user_word(conn, user_id, item.word_id)
-        s = study.pick_sentence(conn, item.word_id)
-        if s is None:
-            return None
-        return s["id"], s["audio_path"]
-    finally:
-        conn.close()
-
-
-def _prepare_text(user_id: int, lang: str) -> text_study.TextCard | None:
-    conn = db.connect()
-    try:
-        return text_study.pick_card(conn, user_id, lang)
-    finally:
-        conn.close()
-
-
 async def _send_next(bot: Bot, chat_id: int, user_id: int, state: FSMContext) -> None:
     langs = _user_langs(user_id)
     if not langs:
@@ -148,30 +122,30 @@ async def _send_next(bot: Bot, chat_id: int, user_id: int, state: FSMContext) ->
             reply_markup=bot_render.lang_keyboard([]),
         )
         return
-    for kind, lang in candidates(_mode(user_id), langs):
-        if kind == "voice":
-            voice = await _prepare_voice(user_id, lang)
-            if voice is not None:
-                sentence_id, audio_path = voice
-                path = f"{AUDIO_DIR}/{audio_path}"
-                await bot.send_audio(chat_id, FSInputFile(path))
-                await bot.send_message(chat_id, bot_render.voice_prompt(lang), parse_mode=ParseMode.MARKDOWN_V2)
-                await state.set_state(Flow.awaiting_voice)
-                await state.update_data(sentence_id=sentence_id)
-                return
-        else:
-            card = _prepare_text(user_id, lang)
-            if card is not None:
-                await bot.send_message(
-                    chat_id,
-                    bot_render.text_prompt(card),
-                    parse_mode=ParseMode.MARKDOWN_V2,
-                )
-                await state.set_state(Flow.awaiting_text)
-                await state.update_data(
-                    known_word_id=card.known_word_id, direction=card.direction
-                )
-                return
+    conn = db.connect()
+    try:
+        pick = await study.prepare_card(conn, user_id, _anthropic(), db.get_prefs(conn, user_id))
+    finally:
+        conn.close()
+    if isinstance(pick, study.VoicePick):
+        await bot.send_audio(chat_id, FSInputFile(f"{AUDIO_DIR}/{pick.audio}"))
+        await bot.send_message(chat_id, bot_render.voice_prompt(pick.lang), parse_mode=ParseMode.MARKDOWN_V2)
+        await state.set_state(Flow.awaiting_voice)
+        await state.set_data({"sentence_id": pick.sentence_id, "word_id": pick.word_id})
+        return
+    if isinstance(pick, study.TextPick):
+        await bot.send_message(
+            chat_id,
+            bot_render.text_prompt(pick.card, pick.sentence),
+            parse_mode=ParseMode.MARKDOWN_V2,
+        )
+        await state.set_state(Flow.awaiting_text)
+        await state.set_data({
+            "known_word_id": pick.card.known_word_id,
+            "direction": pick.card.direction,
+            "known_sentence_id": pick.sentence["id"] if pick.sentence is not None else None,
+        })
+        return
     await state.clear()
     await bot.send_message(chat_id, "all caught up — come back later\\.", parse_mode=ParseMode.MARKDOWN_V2)
 
@@ -182,7 +156,7 @@ async def on_start(msg: Message, state: FSMContext) -> None:
     await state.clear()
     await msg.answer(
         "welcome\\. pick a mode:",
-        reply_markup=bot_render.mode_keyboard(),
+        reply_markup=bot_render.mode_keyboard(_prefs(user_id)),
         parse_mode=ParseMode.MARKDOWN_V2,
     )
     await _send_next(msg.bot, msg.chat.id, user_id, state)
@@ -190,19 +164,28 @@ async def on_start(msg: Message, state: FSMContext) -> None:
 
 @router.message(Command("mode"))
 async def on_mode(msg: Message, state: FSMContext) -> None:
-    _ensure_user(msg.chat.id)
+    user_id = _ensure_user(msg.chat.id)
     await msg.answer(
         "pick a mode:",
-        reply_markup=bot_render.mode_keyboard(),
+        reply_markup=bot_render.mode_keyboard(_prefs(user_id)),
     )
 
 
-@router.callback_query(F.data.startswith("mode:"))
+@router.callback_query(F.data.startswith("mode:") | F.data.startswith("len:"))
 async def on_mode_pick(cq: CallbackQuery, state: FSMContext) -> None:
     user_id = _ensure_user(cq.message.chat.id)
-    _, mode = cq.data.split(":", 1)
-    _set_mode(user_id, mode)
-    await cq.answer(f"mode: {mode}")
+    kind, value = cq.data.split(":", 1)
+    key = "mode" if kind == "mode" else "length"
+    try:
+        _set_pref(user_id, key, value)
+    except ValueError:
+        await cq.answer()
+        return
+    await cq.answer(f"{key}: {value}")
+    try:
+        await cq.message.edit_reply_markup(reply_markup=bot_render.mode_keyboard(_prefs(user_id)))
+    except Exception:
+        pass
     await state.clear()
     await _send_next(cq.bot, cq.message.chat.id, user_id, state)
 
@@ -426,34 +409,40 @@ async def on_voice_answer(msg: Message, state: FSMContext) -> None:
     user_id = _ensure_user(msg.chat.id)
     data = await state.get_data()
     sentence_id = data.get("sentence_id")
-    if sentence_id is None:
+    word_id = data.get("word_id")
+    if sentence_id is None and word_id is None:
         await _send_next(msg.bot, msg.chat.id, user_id, state)
         return
     typed = msg.text or ""
     conn = db.connect()
     try:
-        row = conn.execute(
-            """
-            SELECT s.text, s.gloss_en, w.lemma, w.lang FROM sentences s
-            JOIN words w ON w.id = s.word_id
-            WHERE s.id = ?
-            """,
-            (sentence_id,),
-        ).fetchone()
+        if sentence_id is not None:
+            row = conn.execute(
+                """
+                SELECT s.text, s.gloss_en, w.lemma, w.lang FROM sentences s
+                JOIN words w ON w.id = s.word_id
+                WHERE s.id = ?
+                """,
+                (sentence_id,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT lemma AS text, gloss_en, lemma, lang FROM words WHERE id = ?", (word_id,)
+            ).fetchone()
         if row is None:
             await state.clear()
             await _send_next(msg.bot, msg.chat.id, user_id, state)
             return
-        user_lemmas = study.user_word_lemmas(conn, user_id, row["lang"])
+        user_lemmas = study.user_word_lemmas(conn, user_id, row["lang"]) if sentence_id is not None else None
     finally:
         conn.close()
     tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], row["lang"], user_lemmas)
     text = bot_render.voice_reveal(tokens, row["gloss_en"], row["lang"])
-    await msg.answer(
-        text,
-        parse_mode=ParseMode.MARKDOWN_V2,
-        reply_markup=bot_render.grade_keyboard("v", sentence_id),
+    keyboard = (
+        bot_render.grade_keyboard("v", sentence_id) if sentence_id is not None
+        else bot_render.grade_keyboard("w", word_id)
     )
+    await msg.answer(text, parse_mode=ParseMode.MARKDOWN_V2, reply_markup=keyboard)
 
 
 @router.message(Flow.awaiting_text)
@@ -466,17 +455,21 @@ async def on_text_answer(msg: Message, state: FSMContext) -> None:
         await _send_next(msg.bot, msg.chat.id, user_id, state)
         return
     typed = msg.text or ""
+    ks_id = data.get("known_sentence_id")
     conn = db.connect()
     try:
         card = text_study.load_card(conn, known_word_id, direction)
+        sentence = text_study.load_sentence(conn, ks_id) if ks_id is not None else None
     finally:
         conn.close()
     if card is None:
         await state.clear()
         await _send_next(msg.bot, msg.chat.id, user_id, state)
         return
-    correct = text_study.check_answer(card, typed)
-    text = bot_render.text_reveal(card, correct, typed)
+    if sentence is not None:
+        text = bot_render.text_sentence_reveal(card, sentence, typed)
+    else:
+        text = bot_render.text_reveal(card, text_study.check_answer(card, typed), typed)
     await msg.answer(
         text,
         parse_mode=ParseMode.MARKDOWN_V2,
@@ -503,6 +496,13 @@ async def on_grade(cq: CallbackQuery, state: FSMContext) -> None:
                 return
             word_id = row["word_id"]
             srs.record_grade(conn, user_id, grade, "user_words", {"word_id": word_id}, sentence_id)
+        elif kind == "w":
+            word_id = int(parts[3])
+            if conn.execute("SELECT 1 FROM words WHERE id = ?", (word_id,)).fetchone() is None:
+                await cq.answer()
+                await _send_next(cq.bot, cq.message.chat.id, user_id, state)
+                return
+            srs.record_grade(conn, user_id, grade, "user_words", {"word_id": word_id})
         elif kind == "t":
             known_word_id = int(parts[3])
             direction = parts[4]

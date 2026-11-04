@@ -60,6 +60,34 @@ def review_count(conn, user_id: int) -> int:
     return conn.execute("SELECT COUNT(*) FROM reviews WHERE user_id = ?", (user_id,)).fetchone()[0]
 
 
+_DUE_SQL = {
+    "voice": """
+        SELECT COUNT(*) FROM user_words uw JOIN words w ON w.id = uw.word_id
+        WHERE uw.user_id = ? AND w.lang = ?
+          AND (uw.requeue_after <= ? OR (uw.requeue_after IS NULL AND datetime(uw.due_at) <= datetime('now')))
+    """,
+    "text": """
+        SELECT COUNT(*) FROM user_known_words ukw JOIN known_words kw ON kw.id = ukw.known_word_id
+        WHERE ukw.user_id = ? AND kw.lang = ?
+          AND (ukw.requeue_after <= ? OR (ukw.requeue_after IS NULL AND datetime(ukw.due_at) <= datetime('now')))
+    """,
+}
+
+
+def due_counts(conn, user_id: int, langs: list[str]) -> dict[tuple[str, str], int]:
+    n = review_count(conn, user_id)
+    return {
+        (kind, lang): conn.execute(sql, (user_id, lang, n)).fetchone()[0]
+        for kind, sql in _DUE_SQL.items()
+        for lang in langs
+    }
+
+
+def use_sentence(length: str, status: str | None) -> bool:
+    # Mixed length drills single words until they're known, then sentences.
+    return length == "sentence" or (length == "mixed" and status == "known")
+
+
 def record_grade(conn, user_id: int, grade: int, table: str, key: dict, sentence_id=None, typed=None, rng=None) -> None:
     """Grade one card in `table` (user_words or user_known_words, identified by
     `key`) and log the review. "Again" holds the card back for 5-10 more

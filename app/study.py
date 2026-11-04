@@ -4,8 +4,8 @@ from sqlite3 import Connection, Row
 
 from anthropic import Anthropic
 
-from app import gen, srs, tts
-from app.langs import LANGS
+from app import db, gen, srs, text_study, tts
+from app.langs import LANGS, candidates
 
 # Per-word locks so a background prefetch and a foreground gen for the same
 # word serialize instead of double-firing Anthropic + edge-tts.
@@ -104,11 +104,78 @@ def ensure_user_word(conn: Connection, user_id: int, word_id: int) -> None:
     )
 
 
+def word_status(conn: Connection, user_id: int, word_id: int) -> str | None:
+    row = conn.execute(
+        "SELECT status FROM user_words WHERE user_id = ? AND word_id = ?", (user_id, word_id)
+    ).fetchone()
+    return row["status"] if row else None
+
+
+async def word_audio(lemma: str, lang: str) -> str:
+    return (await tts.synthesize(lemma, LANGS[lang]["voice"])).name
+
+
 def pick_sentence(conn: Connection, word_id: int) -> Row | None:
     return conn.execute(
         "SELECT id, text, gloss_en, audio_path FROM sentences WHERE word_id = ? ORDER BY RANDOM() LIMIT 1",
         (word_id,),
     ).fetchone()
+
+
+@dataclass
+class VoicePick:
+    lang: str
+    audio: str
+    sentence_id: int | None = None
+    word_id: int | None = None
+
+
+@dataclass
+class TextPick:
+    card: text_study.TextCard
+    sentence: Row | None
+
+
+async def _pick_voice(conn: Connection, user_id: int, client: Anthropic, lang: str, length: str) -> VoicePick | None:
+    item = pick_next(conn, user_id, lang)
+    if item is None:
+        return None
+    await ensure_sentences(conn, item.word_id, item.lemma, lang, user_id, client)
+    if item.is_new:
+        ensure_user_word(conn, user_id, item.word_id)
+    if not srs.use_sentence(length, word_status(conn, user_id, item.word_id)):
+        return VoicePick(lang=lang, audio=await word_audio(item.lemma, lang), word_id=item.word_id)
+    s = pick_sentence(conn, item.word_id)
+    if s is None:
+        return None
+    return VoicePick(lang=lang, audio=s["audio_path"], sentence_id=s["id"])
+
+
+def _pick_text(conn: Connection, user_id: int, client: Anthropic, lang: str, length: str) -> TextPick | None:
+    card = text_study.pick_card(conn, user_id, lang)
+    if card is None:
+        return None
+    sentence = None
+    if srs.use_sentence(length, text_study.card_status(conn, user_id, card)):
+        text_study.ensure_sentences(conn, card, client)
+        sentence = text_study.pick_sentence(conn, card.known_word_id)
+    return TextPick(card=card, sentence=sentence)
+
+
+async def prepare_card(
+    conn: Connection, user_id: int, client: Anthropic, prefs: dict[str, str]
+) -> VoicePick | TextPick | None:
+    # Try every (kind, lang) pair, most due first, so an exhausted language or
+    # kind falls through to the next instead of showing "all caught up".
+    langs = db.get_langs(conn, user_id)
+    for kind, lang in candidates(prefs["mode"], langs, srs.due_counts(conn, user_id, langs)):
+        if kind == "voice":
+            pick = await _pick_voice(conn, user_id, client, lang, prefs["length"])
+        else:
+            pick = _pick_text(conn, user_id, client, lang, prefs["length"])
+        if pick is not None:
+            return pick
+    return None
 
 
 _STRIP = ".,!?;:'\"()[]«»„“‚‘…—-¿¡"

@@ -11,8 +11,10 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("SECRET_KEY", "test-secret")
 
     import importlib
-    from app import gen, main, tts
+    from app import db, gen, main, tts
     importlib.reload(main)
+    # Existing tests assume voice sentence cards; new mode/length tests override.
+    monkeypatch.setattr(db, "DEFAULT_PREFS", {"mode": "voice", "length": "sentence"})
 
     audio_dir = tmp_path / "audio"
     audio_dir.mkdir()
@@ -38,7 +40,5 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     main.app.dependency_overrides[main.get_anthropic] = lambda: fake_client
 
     with TestClient(main.app) as c:
-        # Existing tests assume voice-card behavior; new text/mixed tests override.
-        c.cookies.set("slux_mode", "voice")
         c.fake_client = fake_client  # type: ignore[attr-defined]
         yield c

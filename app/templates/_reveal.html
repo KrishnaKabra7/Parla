@@ -16,7 +16,8 @@
     {% if gloss %}<p class="gloss">{{ gloss }}</p>{% endif %}
     {% if typed %}<p class="typed">you typed: {{ typed }}</p>{% endif %}
     <form hx-post="/grade" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner">
-        <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
+        {% if sentence_id %}<input type="hidden" name="sentence_id" value="{{ sentence_id }}">
+        {% else %}<input type="hidden" name="word_id" value="{{ word_id }}">{% endif %}
         <input type="hidden" name="typed" value="{{ typed }}">
         <div id="flagged" hidden></div>
         <div class="grades">

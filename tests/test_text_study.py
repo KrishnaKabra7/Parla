@@ -81,7 +81,8 @@ def test_pick_direction_ratio():
 def test_text_card_grade_creates_srs_row_and_review(client: TestClient):
     _login(client)
     _seed([("привет", "privet", "hi, hello")])
-    client.cookies.set("slux_mode", "text")
+    client.post("/mode/text")
+    client.post("/length/word")
     r = client.get("/study")
     assert r.status_code == 200
     assert 'name="known_word_id"' in r.text
@@ -152,12 +153,13 @@ def test_mode_cookie_switches_card_type(client: TestClient):
     _login(client)
     _seed([("привет", "privet", "hi, hello")])
     # voice mode: no known-word prompt
-    client.cookies.set("slux_mode", "voice")
+    client.post("/mode/voice")
     r = client.get("/study")
     assert 'name="sentence_id"' in r.text
     assert 'name="known_word_id"' not in r.text
     # text mode: no audio
-    client.cookies.set("slux_mode", "text")
+    client.post("/mode/text")
+    client.post("/length/word")
     r = client.get("/study")
     assert 'name="known_word_id"' in r.text
     assert 'id="audio"' not in r.text
@@ -167,7 +169,17 @@ def test_set_mode_persists(client: TestClient):
     _login(client)
     r = client.post("/mode/text", follow_redirects=False)
     assert r.status_code == 303
-    assert r.cookies.get("slux_mode") == "text"
+    r = client.post("/length/word", follow_redirects=False)
+    assert r.status_code == 303
+    conn = db.connect()
+    uid = conn.execute("SELECT id FROM users WHERE name = 'tester'").fetchone()["id"]
+    assert db.get_prefs(conn, uid) == {"mode": "text", "length": "word"}
+    conn.close()
+
+
+def test_set_length_rejects_invalid(client: TestClient):
+    _login(client)
+    assert client.post("/length/bogus", follow_redirects=False).status_code == 400
 
 
 def test_set_mode_rejects_invalid(client: TestClient):
@@ -214,7 +226,8 @@ def test_text_card_falls_back_to_other_direction_when_empty(client: TestClient):
     # Force the RU→EN direction as first choice by seeding user_known_words for EN→RU
     # with a far-future due date so it's not picked, then... simpler: just use text mode
     # with only one word; both directions eventually pick it.
-    client.cookies.set("slux_mode", "text")
+    client.post("/mode/text")
+    client.post("/length/word")
     r = client.get("/study")
     assert 'name="known_word_id"' in r.text
 

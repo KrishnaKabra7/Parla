@@ -11,17 +11,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeSerializer
 
-from app import bot as tg, db, srs, study, text_study
-from app.langs import LANGS, candidates
+from app import bot as tg, db, srs, study, text_study, tts
+from app.langs import LANGS
 
 BASE_DIR = Path(__file__).parent
 AUDIO_DIR = Path("data/audio")
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-not-secure-change-me")
 COOKIE_NAME = "slux_session"
-MODE_COOKIE = "slux_mode"
-MODES = {"mixed", "voice", "text"}
-DEFAULT_MODE = "mixed"
 
 _serializer = URLSafeSerializer(SECRET_KEY, salt="slux-session")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
@@ -207,9 +204,12 @@ def langs_submit(
     return RedirectResponse("/study", status_code=303)
 
 
-def _mode(request: Request) -> str:
-    m = request.cookies.get(MODE_COOKIE, DEFAULT_MODE)
-    return m if m in MODES else DEFAULT_MODE
+def _prefs(user_id: int) -> dict[str, str]:
+    conn = db.connect()
+    try:
+        return db.get_prefs(conn, user_id)
+    finally:
+        conn.close()
 
 
 async def _prefetch_next(user_id: int, client: Anthropic) -> None:
@@ -228,50 +228,37 @@ async def _prefetch_next(user_id: int, client: Anthropic) -> None:
         conn.close()
 
 
-def _text_card_ctx(card: text_study.TextCard) -> dict:
-    prompt = card.english if card.direction == text_study.EN_TO_TL else card.target
-    hint = LANGS[card.lang]["name"] if card.direction == text_study.EN_TO_TL else "English"
+def _text_card_ctx(card: text_study.TextCard, sentence=None) -> dict:
+    to_tl = card.direction == text_study.EN_TO_TL
+    if sentence is not None:
+        prompt = sentence["gloss_en"] if to_tl else sentence["text"]
+    else:
+        prompt = card.english if to_tl else card.target
     return {
         **_lang_ctx(card.lang),
         "card_type": "text",
         "known_word_id": card.known_word_id,
+        "known_sentence_id": sentence["id"] if sentence is not None else None,
         "direction": card.direction,
         "prompt": prompt,
-        "hint_lang": hint,
+        "hint_lang": LANGS[card.lang]["name"] if to_tl else "English",
     }
 
 
-async def _prepare_voice_card(conn, user_id: int, client: Anthropic, lang: str) -> dict | None:
-    item = study.pick_next(conn, user_id, lang)
-    if item is None:
-        return None
-    await study.ensure_sentences(conn, item.word_id, item.lemma, lang, user_id, client)
-    if item.is_new:
-        study.ensure_user_word(conn, user_id, item.word_id)
-    s = study.pick_sentence(conn, item.word_id)
-    if s is None:
-        return None
-    return {**_lang_ctx(lang), "card_type": "voice", "sentence_id": s["id"], "audio": s["audio_path"]}
-
-
-def _prepare_text_card(conn, user_id: int, lang: str) -> dict | None:
-    card = text_study.pick_card(conn, user_id, lang)
-    if card is None:
-        return None
-    return _text_card_ctx(card)
-
-
-async def _prepare_card(conn, user_id: int, client: Anthropic, mode: str) -> dict:
-    # Try every (kind, lang) pair in random order so an exhausted language or
-    # kind falls through to the next instead of showing "all caught up".
-    for kind, lang in candidates(mode, db.get_langs(conn, user_id)):
-        if kind == "voice":
-            ctx = await _prepare_voice_card(conn, user_id, client, lang)
-        else:
-            ctx = _prepare_text_card(conn, user_id, lang)
-        if ctx is not None:
-            return {**ctx, "mode": mode}
-    return {"card_type": None, "mode": mode}
+async def _prepare_card(conn, user_id: int, client: Anthropic, prefs: dict[str, str]) -> dict:
+    c = await study.prepare_card(conn, user_id, client, prefs)
+    if c is None:
+        return {"card_type": None, **prefs}
+    if isinstance(c, study.TextPick):
+        return {**_text_card_ctx(c.card, c.sentence), **prefs}
+    return {
+        **_lang_ctx(c.lang),
+        "card_type": "voice",
+        "sentence_id": c.sentence_id,
+        "word_id": c.word_id,
+        "audio": c.audio,
+        **prefs,
+    }
 
 
 @app.get("/study")
@@ -281,67 +268,85 @@ async def study_page(
     user_id: int = Depends(require_user),
     client: Anthropic = Depends(get_anthropic),
 ):
-    mode = _mode(request)
+    prefs = _prefs(user_id)
     langs = _user_langs(user_id)
     if not langs:
         return RedirectResponse("/langs", status_code=303)
     conn = db.connect()
     try:
-        ctx = await _prepare_card(conn, user_id, client, mode)
+        ctx = await _prepare_card(conn, user_id, client, prefs)
     finally:
         conn.close()
-    if mode != "text":
+    if prefs["mode"] != "text":
         background_tasks.add_task(_prefetch_next, user_id, client)
     ctx["chosen"] = [LANGS[code] for code in langs]
     return templates.TemplateResponse(request, "study.html", ctx)
 
 
 @app.post("/mode/{name}")
-def set_mode(name: str, request: Request):
-    if name not in MODES:
-        raise HTTPException(400, "invalid mode")
-    resp = RedirectResponse("/study", status_code=303)
-    resp.set_cookie(
-        MODE_COOKIE, name, httponly=True, samesite="lax",
-        max_age=60 * 60 * 24 * 365,
-    )
-    return resp
+def set_mode(name: str, user_id: int = Depends(require_user)):
+    return _set_pref(user_id, "mode", name)
+
+
+@app.post("/length/{name}")
+def set_length(name: str, user_id: int = Depends(require_user)):
+    return _set_pref(user_id, "length", name)
+
+
+def _set_pref(user_id: int, key: str, name: str):
+    conn = db.connect()
+    try:
+        db.set_pref(conn, user_id, key, name)
+    except ValueError:
+        raise HTTPException(400, f"invalid {key}")
+    finally:
+        conn.close()
+    return RedirectResponse("/study", status_code=303)
 
 
 @app.post("/review")
 def review(
     request: Request,
-    sentence_id: int = Form(...),
+    sentence_id: int | None = Form(None),
+    word_id: int | None = Form(None),
     typed: str = Form(""),
     user_id: int = Depends(require_user),
 ):
     conn = db.connect()
     try:
-        row = conn.execute(
-            """
-            SELECT s.id, s.text, s.gloss_en, s.audio_path, w.lemma, w.lang FROM sentences s
-            JOIN words w ON w.id = s.word_id
-            WHERE s.id = ?
-            """,
-            (sentence_id,),
-        ).fetchone()
+        if sentence_id is not None:
+            row = conn.execute(
+                """
+                SELECT s.text, s.gloss_en, s.audio_path, w.lemma, w.lang FROM sentences s
+                JOIN words w ON w.id = s.word_id
+                WHERE s.id = ?
+                """,
+                (sentence_id,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT lemma AS text, gloss_en, NULL AS audio_path, lemma, lang FROM words WHERE id = ?",
+                (word_id,),
+            ).fetchone()
         if row is None:
             raise HTTPException(404)
-        user_lemmas = study.user_word_lemmas(conn, user_id, row["lang"])
+        user_lemmas = study.user_word_lemmas(conn, user_id, row["lang"]) if sentence_id is not None else None
     finally:
         conn.close()
     lang = row["lang"]
     tokens = study.diff_and_highlight(row["text"], typed, row["lemma"], lang, user_lemmas)
+    audio = row["audio_path"] or tts.cache_path(row["lemma"], LANGS[lang]["voice"]).name
     return templates.TemplateResponse(
         request,
         "_reveal.html",
         {
             **_lang_ctx(lang),
             "sentence_id": sentence_id,
+            "word_id": word_id,
             "tokens": tokens,
             "gloss": row["gloss_en"],
             "latin": LANGS[lang]["romanize"](row["text"]),
-            "audio": row["audio_path"],
+            "audio": audio,
             "typed": typed,
         },
     )
@@ -475,19 +480,21 @@ def stats_page(
 async def grade(
     request: Request,
     background_tasks: BackgroundTasks,
-    sentence_id: int = Form(...),
     grade: int = Form(...),
+    sentence_id: int | None = Form(None),
+    word_id: int | None = Form(None),
     typed: str = Form(""),
     flagged_word_ids: list[int] = Form(default=[]),
     user_id: int = Depends(require_user),
     client: Anthropic = Depends(get_anthropic),
 ):
-    mode = _mode(request)
+    prefs = _prefs(user_id)
     conn = db.connect()
     try:
-        row = conn.execute(
-            "SELECT word_id FROM sentences WHERE id = ?", (sentence_id,)
-        ).fetchone()
+        if sentence_id is not None:
+            row = conn.execute("SELECT word_id FROM sentences WHERE id = ?", (sentence_id,)).fetchone()
+        else:
+            row = conn.execute("SELECT id AS word_id FROM words WHERE id = ?", (word_id,)).fetchone()
         if row is None:
             raise HTTPException(404)
         word_id = row["word_id"]
@@ -497,10 +504,10 @@ async def grade(
             if seen:
                 srs.record_grade(conn, user_id, srs.Grade.AGAIN, "user_words", {"word_id": fid}, sentence_id, typed)
         srs.record_grade(conn, user_id, grade, "user_words", {"word_id": word_id}, sentence_id, typed)
-        ctx = await _prepare_card(conn, user_id, client, mode)
+        ctx = await _prepare_card(conn, user_id, client, prefs)
     finally:
         conn.close()
-    if mode != "text":
+    if prefs["mode"] != "text":
         background_tasks.add_task(_prefetch_next, user_id, client)
     return templates.TemplateResponse(request, "_card.html", ctx)
 
@@ -519,29 +526,34 @@ def review_text(
     request: Request,
     known_word_id: int = Form(...),
     direction: str = Form(...),
+    known_sentence_id: int | None = Form(None),
     typed: str = Form(""),
     user_id: int = Depends(require_user),
 ):
     conn = db.connect()
     try:
         card = _load_text_card(conn, known_word_id, direction)
+        sentence = text_study.load_sentence(conn, known_sentence_id) if known_sentence_id is not None else None
     finally:
         conn.close()
-    correct = text_study.check_answer(card, typed)
-    return templates.TemplateResponse(
-        request,
-        "_text_reveal.html",
-        {
-            "known_word_id": known_word_id,
-            "direction": direction,
-            "typed": typed,
-            "correct": correct,
-            **_lang_ctx(card.lang),
+    ctx = {"known_word_id": known_word_id, "direction": direction, "typed": typed, **_lang_ctx(card.lang)}
+    if sentence is not None and sentence["known_word_id"] == known_word_id:
+        # Sentence translations vary too much to auto-check; self-grade instead.
+        to_tl = direction == text_study.EN_TO_TL
+        ctx |= {
+            "tokens": study.diff_and_highlight(sentence["text"], typed, card.target, card.lang) if to_tl else None,
+            "target": sentence["text"],
+            "romanized": LANGS[card.lang]["romanize"](sentence["text"]),
+            "english": sentence["gloss_en"],
+        }
+    else:
+        ctx |= {
+            "correct": text_study.check_answer(card, typed),
             "target": card.target,
             "romanized": card.romanized,
             "english": card.english,
-        },
-    )
+        }
+    return templates.TemplateResponse(request, "_text_reveal.html", ctx)
 
 
 @app.post("/grade/text")
@@ -557,7 +569,7 @@ async def grade_text(
 ):
     if direction not in text_study.DIRECTIONS:
         raise HTTPException(400, "invalid direction")
-    mode = _mode(request)
+    prefs = _prefs(user_id)
     conn = db.connect()
     try:
         exists = conn.execute(
@@ -567,10 +579,10 @@ async def grade_text(
             raise HTTPException(404)
         key = {"known_word_id": known_word_id, "direction": direction}
         srs.record_grade(conn, user_id, grade, "user_known_words", key, typed=typed)
-        ctx = await _prepare_card(conn, user_id, client, mode)
+        ctx = await _prepare_card(conn, user_id, client, prefs)
     finally:
         conn.close()
-    if mode != "text":
+    if prefs["mode"] != "text":
         background_tasks.add_task(_prefetch_next, user_id, client)
     return templates.TemplateResponse(request, "_card.html", ctx)
 

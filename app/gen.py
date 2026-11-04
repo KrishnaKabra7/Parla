@@ -47,11 +47,12 @@ def generate(
     target: str,
     known: list[str],
     client: Anthropic | None = None,
+    system_prompt: str | None = None,
 ) -> GenResult:
     client = client or Anthropic()
     known_str = ", ".join(sorted(known)) if known else "(none)"
     system = [
-        {"type": "text", "text": LANGS[lang]["system_prompt"]},
+        {"type": "text", "text": system_prompt or LANGS[lang]["system_prompt"]},
         {
             "type": "text",
             "text": f"Known lemmas: {known_str}",

@@ -236,7 +236,7 @@ def test_hard_lowers_ef_for_voice_and_text(conn):
 def test_web_voice_again_requeues_word_and_flagged_words(client: TestClient):
     client.post("/login", data={"name": "voicey"})
     client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
-    client.cookies.set("slux_mode", "voice")
+    client.post("/mode/voice")
     client.get("/study")
     conn = db.connect()
     s1 = conn.execute("SELECT id, word_id FROM sentences ORDER BY id DESC LIMIT 1").fetchone()
@@ -291,7 +291,7 @@ def test_failed_schedule_write_rolls_back_the_review(conn):
 def _voice_login(client, name):
     client.post("/login", data={"name": name})
     client.post("/langs", data={"langs": ["ru"]}, follow_redirects=False)
-    client.cookies.set("slux_mode", "voice")
+    client.post("/mode/voice")
 
 
 def _graded_words(conn, n):

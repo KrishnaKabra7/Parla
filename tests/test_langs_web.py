@@ -63,7 +63,7 @@ def test_picker_requires_auth(client: TestClient):
 
 def test_german_only_voice_card_is_german_and_labelled(client: TestClient):
     _login(client, ["de"])
-    client.cookies.set("slux_mode", "voice")
+    client.post("/mode/voice")
     r = client.get("/study")
     assert 'name="sentence_id"' in r.text
     assert "German" in r.text
@@ -72,7 +72,8 @@ def test_german_only_voice_card_is_german_and_labelled(client: TestClient):
 
 def test_german_only_text_card_asks_for_german(client: TestClient):
     _login(client, ["de"])
-    client.cookies.set("slux_mode", "text")
+    client.post("/mode/text")
+    client.post("/length/word")
     for _ in range(10):
         r = client.get("/study")
         assert 'name="known_word_id"' in r.text
@@ -112,7 +113,8 @@ def test_text_falls_through_to_other_language_when_one_is_exhausted(client: Test
                 (uid, row["id"], d),
             )
     conn.close()
-    client.cookies.set("slux_mode", "text")
+    client.post("/mode/text")
+    client.post("/length/word")
     for _ in range(10):
         r = client.get("/study")
         assert 'name="known_word_id"' in r.text
@@ -121,7 +123,8 @@ def test_text_falls_through_to_other_language_when_one_is_exhausted(client: Test
 
 def test_grade_text_serves_next_card_from_chosen_language(client: TestClient):
     _login(client, ["de"])
-    client.cookies.set("slux_mode", "text")
+    client.post("/mode/text")
+    client.post("/length/word")
     conn = db.connect()
     kwid = conn.execute("SELECT id FROM known_words WHERE lang='de' AND target='ja'").fetchone()["id"]
     conn.close()
@@ -157,7 +160,7 @@ def test_known_add_form_offers_language_choice(client: TestClient):
 
 def test_words_page_only_shows_chosen_languages(client: TestClient):
     _login(client, ["ru", "de"])
-    client.cookies.set("slux_mode", "voice")
+    client.post("/mode/voice")
     for _ in range(6):
         client.get("/study")
     conn = db.connect()
@@ -195,7 +198,7 @@ def test_picker_offers_spanish(client: TestClient):
 
 def test_spanish_only_voice_card_is_spanish(client: TestClient):
     _login(client, ["es"])
-    client.cookies.set("slux_mode", "voice")
+    client.post("/mode/voice")
     r = client.get("/study")
     assert 'name="sentence_id"' in r.text
     assert "Spanish" in r.text

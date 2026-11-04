@@ -47,6 +47,20 @@ Rules:
 - The target word should appear in a common inflected form appropriate to the sentence, not only the citation form.
 - If the known list is empty or too small to build 3 natural sentences, generate the most natural short (4-9 word) sentences you can that use the target word, keeping them minimal and beginner-friendly."""
 
+TEXT_SYSTEM_PROMPT = """You generate {name} sentences for a translation-practice app. The learner sees the sentence in English or {name} and translates it into the other language.
+
+Given a target {name} word (with its English meaning in parentheses) and a list of {name} words the learner already knows, output STRICT JSON in this exact shape (and nothing else — no prose, no code fences):
+
+{{"gloss_en": "<English translation of the target word>", "sentences": [{{"text": "<{name} sentence>", "gloss_en": "<natural English translation>"}}, {{"text": "...", "gloss_en": "..."}}, {{"text": "...", "gloss_en": "..."}}]}}
+
+Rules:
+- Exactly 3 sentences, each 3-8 words.
+- Each sentence must be something a person would actually say or need in everyday life: greetings, ordering food, shopping, asking directions, transport, plans with friends, home, work, feelings, small talk. No literary, abstract or textbook-only sentences.
+- Use the target word in the sense given by its English meaning.
+- Prefer words from the known list for everything else; common function words are always allowed. Keep any other vocabulary basic and high-frequency.
+- Use correct spelling, capitalization, accents and punctuation for {name}.
+- The English translation should be natural English, not word-for-word."""
+
 _DE_UMLAUTS = str.maketrans({"ä": "a", "ö": "o", "ü": "u", "ß": "ss"})
 
 
@@ -103,9 +117,18 @@ LANGS = {
 KINDS = ("voice", "text")
 
 
-def candidates(mode: str, langs: list[str], rng: random.Random | None = None) -> list[tuple[str, str]]:
+def candidates(
+    mode: str,
+    langs: list[str],
+    due: dict[tuple[str, str], int] | None = None,
+    rng: random.Random | None = None,
+) -> list[tuple[str, str]]:
+    """(kind, lang) pairs to try in order: most due cards first, ties random,
+    so mixed mode clears backlogs before introducing new cards."""
     r = rng or random
     kinds = [mode] if mode in KINDS else list(KINDS)
     pairs = [(k, lang) for k in kinds for lang in langs]
     r.shuffle(pairs)
+    due = due or {}
+    pairs.sort(key=lambda p: -due.get(p, 0))
     return pairs

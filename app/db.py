@@ -79,9 +79,19 @@ CREATE TABLE IF NOT EXISTS user_known_words (
 );
 CREATE INDEX IF NOT EXISTS ix_user_known_words_due ON user_known_words(user_id, due_at);
 
+CREATE TABLE IF NOT EXISTS known_sentences (
+    id INTEGER PRIMARY KEY,
+    known_word_id INTEGER NOT NULL REFERENCES known_words(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    gloss_en TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_known_sentences_word ON known_sentences(known_word_id);
+
 CREATE TABLE IF NOT EXISTS user_prefs (
     user_id INTEGER PRIMARY KEY REFERENCES users(id),
-    mode TEXT NOT NULL DEFAULT 'mixed'
+    mode TEXT NOT NULL DEFAULT 'mixed',
+    length TEXT NOT NULL DEFAULT 'mixed'
 );
 
 CREATE TABLE IF NOT EXISTS tg_users (
@@ -114,6 +124,37 @@ def init_schema(conn: sqlite3.Connection) -> None:
     _in_transaction(conn, _migrate_known_words_columns)
     _in_transaction(conn, _create_user_langs)
     _in_transaction(conn, _add_requeue_column)
+    _in_transaction(conn, _add_length_pref)
+
+
+def _add_length_pref(conn: sqlite3.Connection) -> None:
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(user_prefs)")}
+    if "length" not in cols:
+        conn.execute("ALTER TABLE user_prefs ADD COLUMN length TEXT NOT NULL DEFAULT 'mixed'")
+
+
+MODES = ("mixed", "voice", "text")
+LENGTHS = ("mixed", "sentence", "word")
+DEFAULT_PREFS = {"mode": "mixed", "length": "mixed"}
+
+
+def get_prefs(conn: sqlite3.Connection, user_id: int) -> dict[str, str]:
+    row = conn.execute("SELECT mode, length FROM user_prefs WHERE user_id = ?", (user_id,)).fetchone()
+    return {"mode": row["mode"], "length": row["length"]} if row else dict(DEFAULT_PREFS)
+
+
+def set_pref(conn: sqlite3.Connection, user_id: int, key: str, value: str) -> None:
+    allowed = {"mode": MODES, "length": LENGTHS}
+    if value not in allowed.get(key, ()):
+        raise ValueError(f"invalid {key}: {value!r}")
+    prefs = {**get_prefs(conn, user_id), key: value}
+    conn.execute(
+        """
+        INSERT INTO user_prefs(user_id, mode, length) VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET mode = excluded.mode, length = excluded.length
+        """,
+        (user_id, prefs["mode"], prefs["length"]),
+    )
 
 
 def _add_requeue_column(conn: sqlite3.Connection) -> None:

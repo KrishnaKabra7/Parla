@@ -7,7 +7,8 @@
         <button type="button" class="replay slow" onclick="var a=document.getElementById('audio');a.playbackRate=0.6;a.currentTime=0;a.play()" aria-label="replay slow">🐢</button>
     </div>
     <form hx-post="/review" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner" autocomplete="off">
-        <input type="hidden" name="sentence_id" value="{{ sentence_id }}">
+        {% if sentence_id %}<input type="hidden" name="sentence_id" value="{{ sentence_id }}">
+        {% else %}<input type="hidden" name="word_id" value="{{ word_id }}">{% endif %}
         <input type="text" name="typed" autofocus placeholder="type what you heard">
         <button type="submit">check</button>
     </form>
@@ -17,6 +18,7 @@
     <form hx-post="/review/text" hx-target="#card" hx-swap="outerHTML" hx-indicator="#spinner" autocomplete="off">
         <input type="hidden" name="known_word_id" value="{{ known_word_id }}">
         <input type="hidden" name="direction" value="{{ direction }}">
+        {% if known_sentence_id %}<input type="hidden" name="known_sentence_id" value="{{ known_sentence_id }}">{% endif %}
         <input type="text" name="typed" autofocus placeholder="type the translation">
         <button type="submit">check</button>
     </form>

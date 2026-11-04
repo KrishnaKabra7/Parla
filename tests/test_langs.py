@@ -22,19 +22,19 @@ def test_romanize_only_for_russian():
 
 def test_candidates_single_kind():
     rng = random.Random(0)
-    assert sorted(candidates("voice", ["ru", "de"], rng)) == [("voice", "de"), ("voice", "ru")]
-    assert candidates("text", ["de"], rng) == [("text", "de")]
+    assert sorted(candidates("voice", ["ru", "de"], rng=rng)) == [("voice", "de"), ("voice", "ru")]
+    assert candidates("text", ["de"], rng=rng) == [("text", "de")]
 
 
 def test_candidates_mixed_covers_all_pairs():
-    got = candidates("mixed", ["ru", "de"], random.Random(1))
+    got = candidates("mixed", ["ru", "de"], rng=random.Random(1))
     assert sorted(got) == sorted(
         [("voice", "ru"), ("voice", "de"), ("text", "ru"), ("text", "de")]
     )
 
 
 def test_candidates_mixed_varies_first_pick():
-    firsts = {candidates("mixed", ["ru", "de"], random.Random(s))[0] for s in range(50)}
+    firsts = {candidates("mixed", ["ru", "de"], rng=random.Random(s))[0] for s in range(50)}
     assert len(firsts) == 4
 
 

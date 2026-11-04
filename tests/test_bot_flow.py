@@ -69,33 +69,38 @@ def test_mode_roundtrip(bot_setup):
     assert bot._mode(uid) == "text"
 
 
+async def _pick(bot_setup, uid, mode, length="sentence"):
+    from app import study
+    db = bot_setup["db"]
+    _set_langs(bot_setup, uid, ["ru"])
+    conn = db.connect()
+    try:
+        return await study.prepare_card(conn, uid, bot_setup["bot_mod"]._anthropic(), {"mode": mode, "length": length})
+    finally:
+        conn.close()
+
+
 async def test_prepare_voice_returns_sentence(bot_setup):
     bot = bot_setup["bot_mod"]
     uid = bot._ensure_user(7)
-    result = await bot._prepare_voice(uid, "ru")
-    assert result is not None
-    sentence_id, audio_path = result
-    assert isinstance(sentence_id, int)
-    assert audio_path.endswith(".mp3")
+    pick = await _pick(bot_setup, uid, "voice")
+    assert isinstance(pick.sentence_id, int)
+    assert pick.audio.endswith(".mp3")
 
 
-def test_prepare_text_returns_card(bot_setup):
+async def test_prepare_text_returns_card(bot_setup):
     bot = bot_setup["bot_mod"]
     uid = bot._ensure_user(8)
-    card = bot._prepare_text(uid, "ru")
-    assert card is not None
-    assert card.target and card.english
+    pick = await _pick(bot_setup, uid, "text", "word")
+    assert pick.card.target and pick.card.english
+    assert pick.sentence is None
 
 
 async def test_grade_callback_updates_voice_srs(bot_setup):
     bot = bot_setup["bot_mod"]
     db = bot_setup["db"]
     uid = bot._ensure_user(100)
-    # Pre-create a voice card so we have a sentence_id to grade.
-    result = await bot._prepare_voice(uid, "ru")
-    assert result is not None
-    sentence_id, _ = result
-    # user_words row exists after _prepare_voice for a new word.
+    sentence_id = (await _pick(bot_setup, uid, "voice")).sentence_id
 
     cq = MagicMock()
     cq.data = f"g:5:v:{sentence_id}"
@@ -426,3 +431,42 @@ async def test_telegram_voice_again_requeues(bot_setup):
     row = conn.execute("SELECT interval_days, requeue_after FROM user_words WHERE user_id = ?", (uid,)).fetchone()
     conn.close()
     assert row["interval_days"] == 0 and row["requeue_after"] is not None
+
+
+async def test_voice_word_flow_grades_the_word(bot_setup):
+    bot = bot_setup["bot_mod"]
+    db = bot_setup["db"]
+    uid = bot._ensure_user(600)
+    _set_langs(bot_setup, uid, ["ru"])
+    bot._set_mode(uid, "voice")
+    bot._set_pref(uid, "length", "word")
+    b = _fake_bot()
+    st = _state(600)
+    await bot._send_next(b, 600, uid, st)
+    b.send_audio.assert_called_once()
+    data = await st.get_data()
+    assert data["sentence_id"] is None
+    word_id = data["word_id"]
+
+    m = _msg(600, "anything", b)
+    await bot.on_voice_answer(m, st)
+    markup = m.answer.call_args.kwargs["reply_markup"]
+    assert f"g:4:w:{word_id}" in _buttons(markup)
+
+    await bot.on_grade(_cq(600, f"g:4:w:{word_id}", b), st)
+    conn = db.connect()
+    uw = conn.execute("SELECT interval_days FROM user_words WHERE user_id = ? AND word_id = ?", (uid, word_id)).fetchone()
+    conn.close()
+    assert uw["interval_days"] == 1.0
+
+
+async def test_mode_keyboard_sets_length(bot_setup):
+    bot = bot_setup["bot_mod"]
+    uid = bot._ensure_user(601)
+    _set_langs(bot_setup, uid, ["ru"])
+    buttons = _buttons(bot_setup["render"].mode_keyboard(bot._prefs(uid)))
+    assert {"mode:mixed", "mode:voice", "mode:text", "len:mixed", "len:sentence", "len:word"} <= set(buttons)
+    await bot.on_mode_pick(_cq(601, "len:word", _fake_bot()), _state(601))
+    assert bot._prefs(uid)["length"] == "word"
+    await bot.on_mode_pick(_cq(601, "len:bogus", _fake_bot()), _state(601))
+    assert bot._prefs(uid)["length"] == "word"
