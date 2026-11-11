@@ -357,7 +357,7 @@ async def test_add_russian_word_flow_still_transliterates(bot_setup):
     await bot.on_add_english(_msg(509, "cat", b), st)
     await bot.on_add_cyrillic(_msg(509, "-", b), st)
     conn = db.connect()
-    row = conn.execute("SELECT target, romanized FROM known_words WHERE english='cat'").fetchone()
+    row = conn.execute("SELECT target, romanized FROM known_words WHERE lang='ru' AND english='cat'").fetchone()
     conn.close()
     assert (row["target"], row["romanized"]) == ("кошка", "koshka")
 

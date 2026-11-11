@@ -14,6 +14,8 @@ COPY data/de_freq.txt ./data/de_freq.txt
 COPY data/known_words_de.txt ./data/known_words_de.txt
 COPY data/es_freq.txt ./data/es_freq.txt
 COPY data/known_words_es.txt ./data/known_words_es.txt
+COPY data/fr_freq.txt ./data/fr_freq.txt
+COPY data/known_words_fr.txt ./data/known_words_fr.txt
 COPY litestream.yml /etc/litestream.yml
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 

@@ -1,0 +1,503 @@
+# Seed list for French text-to-text drills. Format: target||english
+# The middle (romanized) field is empty for Latin-script languages.
+# Roughly the 500 most frequent words, in frequency order.
+oui||yes
+non||no
+de||of, from
+je||I
+est||is
+pas||not
+le||the (masc), him, it
+que||that, what, than
+la||the (fem), her, it
+vous||you (formal/plural)
+tu||you (informal)
+un||a, an, one (masc)
+à||to, at
+et||and
+il||he, it
+a||has
+ne||not (with pas)
+les||the (plural), them
+en||in, some of it
+on||we, one (impersonal)
+ça||that, it
+une||a, an, one (fem)
+ce||this, that, it
+pour||for
+ai||have (j'ai)
+des||some, of the (plural)
+qui||who, which
+mais||but
+dans||in, inside
+nous||we, us
+elle||she, her
+me||me, myself
+bien||well, good
+si||if, so
+du||of the, some (masc)
+y||there
+suis||am
+avec||with
+tout||everything, all
+plus||more
+mon||my (masc)
+te||you (obj, informal)
+au||to the, at the (masc)
+fait||does, makes, done, fact
+moi||me
+va||goes
+était||was
+as||have (tu as)
+faire||to do, to make
+ils||they (masc)
+sur||on
+quoi||what
+se||himself, herself, oneself
+comme||like, as
+sais||know (je/tu sais)
+être||to be
+veux||want (je/tu veux)
+ici||here
+ma||my (fem)
+toi||you (stressed, informal)
+dit||says, said
+lui||him, to him, to her
+votre||your (formal)
+es||are (tu es)
+pourquoi||why
+où||where
+là||there
+rien||nothing
+cette||this, that (fem)
+sont||are (ils sont)
+quand||when
+peux||can (je/tu peux)
+dire||to say, to tell
+son||his, her, its (masc)
+avez||have (vous avez)
+vais||go, am going (je vais)
+alors||then, so
+ton||your (masc, informal)
+comment||how
+par||by, through
+ou||or
+chose||thing
+bon||good
+ont||have (ils ont)
+merci||thank you, thanks
+juste||just, fair
+très||very
+jamais||never
+été||been, summer
+aussi||also, too
+avoir||to have
+vraiment||really, truly
+voir||to see
+même||same, even
+sa||his, her, its (fem)
+maintenant||now
+tous||all, everyone
+peut||can (il peut)
+deux||two
+ces||these, those
+êtes||are (vous êtes)
+allez||go (vous allez)
+ta||your (fem, informal)
+autre||other, another
+peu||little, few
+temps||time, weather
+quelque||some
+fais||do, make (je/tu fais)
+toujours||always, still
+encore||again, still
+notre||our
+mes||my (plural)
+besoin||need
+avait||had (il avait)
+accord||agreement (d'accord = okay)
+faut||must, is necessary (il faut)
+dois||must (je/tu dois)
+vie||life
+peut-être||maybe, perhaps
+aller||to go
+fois||time (occasion)
+vu||seen
+donc||so, therefore
+sans||without
+monde||world, people
+étais||was (j'étais)
+avant||before
+sûr||sure, safe
+trop||too, too much
+parler||to speak, to talk
+personne||nobody, person
+avais||had (j'avais)
+père||father
+crois||believe, think (je crois)
+après||after
+aux||to the, at the (plural)
+ses||his, her, its (plural)
+pense||think (je pense)
+eu||had (past participle)
+aime||love, like (j'aime)
+leur||their, to them
+homme||man
+viens||come (je/tu viens)
+vrai||true, real
+femme||woman, wife
+doit||must (il doit)
+veut||wants
+ans||years
+mal||badly, bad, pain
+chez||at the home of, at
+déjà||already
+depuis||since, for
+beaucoup||a lot, much, many
+vos||your (plural, formal)
+bonne||good (fem)
+mort||dead, death
+mieux||better
+vas||go (tu vas)
+mère||mother
+sera||will be
+dis||say, tell (je/tu dis)
+fille||girl, daughter
+tes||your (plural, informal)
+gens||people
+quel||which, what (masc)
+vois||see (je/tu vois)
+désolé||sorry
+voilà||there it is, here you go
+avons||have (nous avons)
+petit||small, little
+maison||house, home
+cela||that
+autres||others
+toute||all, whole (fem)
+soir||evening
+passé||past, spent
+prendre||to take
+jour||day
+monsieur||sir, Mr
+nos||our (plural)
+savoir||to know
+choses||things
+salut||hi, bye
+cet||this, that (masc before vowel)
+nom||name
+argent||money, silver
+bonjour||hello, good morning
+nuit||night
+raison||reason (avoir raison = to be right)
+moins||less, minus
+arrive||arrives, happens
+maman||mom, mum
+reste||stays, rest
+moment||moment
+voulais||wanted (je voulais)
+seul||alone, only
+aider||to help
+air||air, look
+entre||between
+papa||dad
+passe||passes, spends
+aurais||would have (j'aurais)
+problème||problem
+peur||fear
+regarde||look, looks
+voulez||want (vous voulez)
+trouvé||found
+fils||son
+attends||wait (je/tu attends)
+savez||know (vous savez)
+trouver||to find
+trois||three
+assez||enough, quite
+famille||family
+plaît||pleases (s'il vous plaît = please)
+pourrait||could (il pourrait)
+travail||work, job
+pris||taken
+pu||been able to
+tête||head
+quelle||which, what (fem)
+sait||knows
+sommes||are (nous sommes)
+appelle||call, calls
+quelques||a few, some
+faites||do, make (vous faites)
+partir||to leave
+vite||quickly, fast
+arrête||stop, stops
+serait||would be
+voiture||car
+enfants||children
+pendant||during, while
+idée||idea
+chance||luck
+parle||speak, speaks
+aurait||would have (il aurait)
+part||part, share, leaves
+elles||they (fem)
+jours||days
+grand||big, tall
+aujourd'hui||today
+venir||to come
+ami||friend
+demain||tomorrow
+tard||late
+puis||then
+truc||thing, stuff
+passer||to pass, to spend
+petite||small, little (fem)
+tant||so much
+connais||know (je/tu connais)
+combien||how much, how many
+sens||sense, direction, feel
+pouvez||can (vous pouvez)
+porte||door, wears
+sortir||to go out, to exit
+heure||hour, time
+contre||against
+comprends||understand (je/tu comprends)
+entendu||heard, understood
+vient||comes
+allons||go (nous allons), let's go
+ensemble||together
+nouveau||new
+amour||love
+cas||case
+sous||under
+rester||to stay
+amis||friends
+prends||take (je/tu prends)
+fini||finished
+hommes||men
+question||question
+partie||part, game, gone (fem)
+histoire||story, history
+devrais||should (je/tu devrais)
+aide||help
+dernière||last (fem)
+demande||ask, asks, request
+chercher||to look for, to fetch
+pensais||thought (je pensais)
+genre||kind, type
+seulement||only
+police||police
+car||because, for
+mois||month
+frère||brother
+laisser||to leave, to let
+aucun||no, none (masc)
+mettre||to put
+eux||them
+chaque||each, every
+ville||city, town
+arrivé||arrived, happened
+devrait||should (il devrait)
+vont||go (ils vont)
+longtemps||a long time
+heures||hours, o'clock
+bébé||baby
+place||place, seat, square
+revoir||to see again (au revoir = goodbye)
+compris||understood
+ni||neither, nor
+savais||knew (je savais)
+leurs||their (plural)
+étaient||were (ils étaient)
+attention||attention, watch out
+donner||to give
+affaire||matter, business, deal
+endroit||place, spot
+pourrais||could (je/tu pourrais)
+corps||body
+façon||way, manner
+donné||given
+voici||here is
+train||train
+dont||whose, of which
+écoute||listen, listens
+yeux||eyes
+trouve||find, finds
+pouvoir||to be able to, power
+perdu||lost
+premier||first
+côté||side
+point||point, dot
+tellement||so, so much
+main||hand
+enfant||child
+vieux||old
+matin||morning
+venu||come (past participle)
+pardon||sorry, excuse me
+là-bas||over there
+vers||towards, around
+minutes||minutes
+demandé||asked
+devant||in front of
+enfin||finally, at last
+arrêter||to stop
+cause||cause (à cause de = because of)
+nouvelle||new (fem), news
+chambre||bedroom, room
+droit||right, straight, law
+parti||left, gone, party
+mis||put (past participle)
+eau||water
+compte||account, counts
+terre||earth, ground, land
+belle||beautiful (fem)
+espère||hope (j'espère)
+loin||far
+mari||husband
+donne||give, gives
+fin||end
+croire||to believe
+gros||big, fat
+plutôt||rather
+prêt||ready
+bureau||office, desk
+mourir||to die
+hier||yesterday
+possible||possible
+jouer||to play
+demander||to ask
+celui||the one (masc)
+beau||beautiful, handsome
+jeune||young
+dehors||outside
+docteur||doctor
+confiance||trust, confidence
+appeler||to call
+années||years
+vérité||truth
+école||school
+chef||boss, chief, chef
+femmes||women
+semaine||week
+vivre||to live
+feu||fire
+journée||day (duration)
+madame||madam, Mrs
+téléphone||phone, telephone
+près||near, close
+meilleur||better, best
+dessus||on top, above
+mains||hands
+équipe||team
+grande||big, tall (fem)
+manger||to eat
+arriver||to arrive, to happen
+dur||hard, tough
+garçon||boy, waiter
+important||important
+exactement||exactly
+font||do, make (ils font)
+fort||strong, loud
+presque||almost
+plein||full
+derrière||behind
+mariage||wedding, marriage
+parents||parents
+dernier||last (masc)
+fou||crazy, mad
+ceux||those, the ones
+tomber||to fall
+attendre||to wait
+vue||view, sight
+envie||desire (avoir envie de = to feel like)
+fête||party, holiday
+jeu||game
+génial||great, awesome
+pays||country
+cours||class, course, run
+bientôt||soon
+numéro||number
+personnes||people, persons
+cinq||five
+parfait||perfect
+ainsi||thus, this way
+retour||return
+semble||seems
+autant||as much, as many
+minute||minute
+instant||moment, instant
+penser||to think
+essayer||to try
+prend||takes
+mauvais||bad
+mot||word
+travailler||to work
+quatre||four
+rentrer||to go home, to go back in
+regarder||to look at, to watch
+choix||choice
+parfois||sometimes
+film||film, movie
+faute||fault, mistake
+facile||easy
+bas||low, down
+changer||to change
+entendre||to hear
+plaisir||pleasure
+heureux||happy
+entrer||to enter, to come in
+six||six
+sept||seven
+huit||eight
+neuf||nine, new
+dix||ten
+rue||street
+chien||dog
+chat||cat
+livre||book
+pain||bread
+vin||wine
+café||coffee, café
+lait||milk
+table||table
+lit||bed
+fenêtre||window
+clé||key
+sac||bag
+sœur||sister
+année||year
+soleil||sun
+mer||sea
+ciel||sky
+froid||cold
+chaud||hot, warm
+rouge||red
+bleu||blue
+vert||green
+noir||black
+blanc||white
+ouvert||open
+fermé||closed
+acheter||to buy
+boire||to drink
+dormir||to sleep
+lire||to read
+écrire||to write
+ouvrir||to open
+fermer||to close
+payer||to pay
+aimer||to like, to love
+comprendre||to understand
+apprendre||to learn
+gauche||left
+droite||right (direction)
+gare||train station
+magasin||shop, store
+restaurant||restaurant
+prix||price, prize
+cher||expensive, dear
+libre||free, available
+malade||sick, ill
+fatigué||tired
+faim||hunger (avoir faim = to be hungry)
+soif||thirst (avoir soif = to be thirsty)

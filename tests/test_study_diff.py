@@ -36,3 +36,12 @@ def test_spanish_diff_strips_inverted_marks_and_accents():
     toks = diff_and_highlight("¿Dónde está mi niño?", "donde esta mi nino", "niño", "es")
     assert all(t.matched for t in toks)
     assert [t.is_target for t in toks] == [False, False, False, True]
+
+
+def test_french_diff_handles_elision_and_accents():
+    toks = diff_and_highlight("J’ai vu l'école hier.", "jai vu ecole hier", "école", "fr")
+    assert [t.matched for t in toks] == [False, True, True, True]
+    assert [t.is_target for t in toks] == [False, False, True, False]
+    toks = diff_and_highlight("J'ai faim aujourd'hui.", "j'ai faim aujourd'hui", "ai", "fr")
+    assert all(t.matched for t in toks)
+    assert toks[0].is_target

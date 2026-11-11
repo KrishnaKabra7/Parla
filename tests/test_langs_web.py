@@ -53,7 +53,7 @@ def test_pick_languages_saves_and_redirects(client: TestClient):
 def test_pick_languages_rejects_empty_and_unknown(client: TestClient):
     _login(client, None)
     assert client.post("/langs", data={}).status_code == 400
-    assert client.post("/langs", data={"langs": ["fr"]}).status_code == 400
+    assert client.post("/langs", data={"langs": ["xx"]}).status_code == 400
 
 
 def test_picker_requires_auth(client: TestClient):
@@ -185,7 +185,7 @@ def test_known_add_russian_latin_in_word_field_is_transliterated(client: TestCli
     _login(client, ["ru"])
     client.post("/known/add", data={"lang": "ru", "target": "koshka", "romanized": "", "english": "cat"})
     conn = db.connect()
-    row = conn.execute("SELECT target, romanized FROM known_words WHERE english='cat'").fetchone()
+    row = conn.execute("SELECT target, romanized FROM known_words WHERE lang='ru' AND english='cat'").fetchone()
     conn.close()
     assert (row["target"], row["romanized"]) == ("кошка", "koshka")
 

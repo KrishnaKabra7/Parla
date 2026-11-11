@@ -80,3 +80,24 @@ def test_startup_seeds_spanish(client):
     assert n == 3000
     assert len(known) == 500
     assert {"sí", "no", "yo", "casa"} <= known
+
+
+def test_french_fold_ignores_accents_ligatures_and_elision():
+    fold = LANGS["fr"]["fold"]
+    assert fold("Élève") == fold("eleve")
+    assert fold("garçon") == fold("garcon")
+    assert fold("sœur") == fold("soeur")
+    assert fold("l’eau") == fold("l'eau") == fold("eau")
+    assert fold("aujourd'hui") == "aujourd'hui"
+
+
+def test_startup_seeds_french(client):
+    from app import db
+
+    conn = db.connect()
+    n = conn.execute("SELECT COUNT(*) FROM words WHERE lang = 'fr'").fetchone()[0]
+    known = {r["target"] for r in conn.execute("SELECT target FROM known_words WHERE lang = 'fr'")}
+    conn.close()
+    assert n == 3000
+    assert len(known) == 500
+    assert {"oui", "non", "je", "maison"} <= known

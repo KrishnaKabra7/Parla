@@ -178,7 +178,7 @@ async def prepare_card(
     return None
 
 
-_STRIP = ".,!?;:'\"()[]«»„“‚‘…—-¿¡"
+_STRIP = ".,!?;:'\"()[]«»„“‚‘’…—-¿¡"
 
 
 def _norm(tok: str, lang: str) -> str:

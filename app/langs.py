@@ -1,4 +1,5 @@
 import random
+import re
 import unicodedata
 
 from app.translit import to_cyrillic, to_latin
@@ -47,6 +48,21 @@ Rules:
 - The target word should appear in a common inflected form appropriate to the sentence, not only the citation form.
 - If the known list is empty or too small to build 3 natural sentences, generate the most natural short (4-9 word) sentences you can that use the target word, keeping them minimal and beginner-friendly."""
 
+SYSTEM_PROMPT_FR = """You generate short French sentences for a vocabulary-trainer app.
+
+Given a target French word and a list of French words the learner already knows, output STRICT JSON in this exact shape (and nothing else — no prose, no code fences):
+
+{"gloss_en": "<English translation of the target word>", "sentences": [{"text": "<French sentence>", "gloss_en": "<English translation>"}, {"text": "...", "gloss_en": "..."}, {"text": "...", "gloss_en": "..."}]}
+
+Rules:
+- Exactly 3 sentences.
+- Each sentence is 4-9 words.
+- Natural spoken register (things a native speaker would actually say), in standard French.
+- Every content word other than the target MUST come from the known-words list. Function words (articles, prepositions, pronouns, common conjunctions, forms of être/avoir/aller) are always allowed.
+- Use correct accents, elision (j'ai, l'eau) and a plain apostrophe (').
+- The target word should appear in a common inflected form appropriate to the sentence, not only the citation form.
+- If the known list is empty or too small to build 3 natural sentences, generate the most natural short (4-9 word) sentences you can that use the target word, keeping them minimal and beginner-friendly."""
+
 TEXT_SYSTEM_PROMPT = """You generate {name} sentences for a translation-practice app. The learner sees the sentence in English or {name} and translates it into the other language.
 
 Given a target {name} word (with its English meaning in parentheses) and a list of {name} words the learner already knows, output STRICT JSON in this exact shape (and nothing else — no prose, no code fences):
@@ -81,6 +97,16 @@ def _fold_es(s: str) -> str:
     return "".join(c for c in s if not unicodedata.combining(c))
 
 
+_FR_ELISION = re.compile(r"^(?:[cdjlmnst]|qu|jusqu|lorsqu|puisqu)'(?=.)")
+
+
+def _fold_fr(s: str) -> str:
+    # Accents optional; "l'homme" folds to "homme" so an elided article or
+    # pronoun doesn't hide the word from matching. Applied to both sides.
+    s = s.lower().replace("’", "'").replace("œ", "oe").replace("æ", "ae")
+    return _fold_es(_FR_ELISION.sub("", s))
+
+
 LANGS = {
     "ru": {
         "name": "Russian",
@@ -110,6 +136,16 @@ LANGS = {
         "voice": "es-ES-AlvaroNeural",
         "system_prompt": SYSTEM_PROMPT_ES,
         "fold": _fold_es,
+        "romanize": lambda s: None,
+    },
+    "fr": {
+        "name": "French",
+        "flag": "🇫🇷",
+        "freq_file": "data/fr_freq.txt",
+        "known_file": "data/known_words_fr.txt",
+        "voice": "fr-FR-HenriNeural",
+        "system_prompt": SYSTEM_PROMPT_FR,
+        "fold": _fold_fr,
         "romanize": lambda s: None,
     },
 }

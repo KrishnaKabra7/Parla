@@ -93,7 +93,7 @@ def test_set_langs_rejects_empty_and_unknown(tmp_path):
     with pytest.raises(ValueError):
         db.set_langs(conn, 1, [])
     with pytest.raises(ValueError):
-        db.set_langs(conn, 1, ["fr"])
+        db.set_langs(conn, 1, ["xx"])
 
 
 def test_interrupted_column_rename_is_rolled_back(old_db, monkeypatch):
